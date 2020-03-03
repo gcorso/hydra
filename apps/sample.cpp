@@ -1,6 +1,16 @@
+#include <boost/regex.hpp>
 #include <iostream>
+#include <string>
 
-int main(){
-  //server example
-  std::cout << "Hello, World!" << std::endl;
+int main()
+{
+  std::string line;
+  boost::regex pat( "^Subject: (Re: |Aw: )*(.*)" );
+
+  {
+    std::getline(std::cin, line);
+    boost::smatch matches;
+    if (boost::regex_match(line, matches, pat))
+      std::cout << matches[2] << std::endl;
+  }
 }

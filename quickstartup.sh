@@ -1,4 +1,3 @@
-cd hydra;
 git pull;
 cmake .;
 make;
