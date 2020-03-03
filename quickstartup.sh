@@ -4,3 +4,5 @@ git pull;
 cmake .;
 make;
 apps/sample;
+
+# usage: git clone https://github.com/lukecavabarrett/hydra.git; cd hydra; git checkout dev; sh quickstartup.sh password
