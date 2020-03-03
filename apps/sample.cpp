@@ -15,7 +15,6 @@ int main()
   desc.add_options()("dbconnstring", po::value<std::string>(&dbconnstring));
   po::store(po::parse_config_file(settings_file , desc), vm);
   po::notify(vm);
-  std::cout << dbconnstring << std::endl;
 
   try {
     pqxx::connection C(dbconnstring);
