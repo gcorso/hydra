@@ -1,2 +1,2 @@
 add_executable(sample sample.cpp)
-target_link_libraries(sample boost_regex)
+target_link_libraries(sample pthread pq pqxx)
