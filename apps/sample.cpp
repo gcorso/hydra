@@ -8,7 +8,7 @@ namespace po = boost::program_options;
 
 int main()
 {
-  std::ifstream settings_file("/home/luke/CLionProjects/hydra/config.ini");
+  std::ifstream settings_file("config.ini");
   po::variables_map vm;
   std::string dbconnstring;
   po::options_description desc;
