@@ -4,6 +4,6 @@ git pull;
 cmake .;
 make;
 openssl aes-256-cbc -in config.ini.enc -out config.ini -d -pass pass:${1} -iter 1546
-apps/sample;
+apps/hydra;
 
 # usage: git clone https://github.com/lukecavabarrett/hydra.git; cd hydra; git checkout dev; sh quickstartup.sh password
