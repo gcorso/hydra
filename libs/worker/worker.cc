@@ -6,7 +6,11 @@
 #include <iostream>
 namespace po = boost::program_options;
 
-namespace hydra {
+namespace hydra::worker {
+
+
+
+
 
 std::string get_dbconn_string() {
   std::ifstream settings_file("config.ini");
@@ -23,6 +27,7 @@ std::string get_dbconn_string() {
   return dbconnstring;
 }
 
+/*
 namespace {
 constexpr const char *const WORKER_ID_PATH = "~/.worker/id";
 uint64_t retrieve_file_id() {
@@ -66,5 +71,5 @@ void worker::setup_existing() {
 worker::~worker() {
   dbconn->disconnect();
   delete dbconn;
-}
+}*/
 }

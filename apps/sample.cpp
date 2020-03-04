@@ -8,7 +8,7 @@ namespace po = boost::program_options;
 
 int main() {
   //hydra::worker w;
-
+/*
   std::ifstream settings_file("config.ini");
   po::variables_map vm;
   std::string dbconnstring;
@@ -31,6 +31,6 @@ int main() {
   }
 
   dbconn->prepare("INSERT INTO workers DEFAULT VALUES");
-  dbconn->disconnect();
+  dbconn->disconnect();*/
 
 }

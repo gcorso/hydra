@@ -7,17 +7,12 @@
 
 namespace hydra {
 
-class worker {
- public:
-  worker();
-  ~worker();
-  void run();
- private:
-  void setup_new();
-  void setup_existing();
-  uint64_t id;
-  std::string nick;
-  pqxx::connection* dbconn;
+namespace worker {
+
+  extern uint64_t id;
+  extern std::string nick;
+  extern pqxx::connection dbconn;
+
 };
 
 }
