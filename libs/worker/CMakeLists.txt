@@ -4,7 +4,7 @@ add_library(${PROJECT_NAME} STATIC worker.cc)
 
 target_link_libraries(${PROJECT_NAME}
         PRIVATE
-
+        pthread pq pqxx boost_program_options
         )
 
 add_library(libs::${PROJECT_NAME} ALIAS ${PROJECT_NAME})

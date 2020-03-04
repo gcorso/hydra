@@ -16,6 +16,7 @@ std::string get_dbconn_string() {
   desc.add_options()("dbconnstring", po::value<std::string>(&dbconnstring));
   po::store(po::parse_config_file(settings_file, desc), vm);
   po::notify(vm);
+  std::cout << dbconnstring << std::endl;
   return dbconnstring;
 }
 
@@ -41,7 +42,6 @@ worker::worker() {
       std::cout << "could not open database" << std::endl;
       exit(1);
     }
-    dbconn->disconnect();
   } catch (const std::exception &e) {
     std::cerr << "connection to db failed: "<< e.what() << std::endl;
     exit(1);
@@ -55,7 +55,7 @@ void worker::run() {
 
 }
 void worker::setup_new() {
-  dbconn->prepare("INSERT INTO workers DEFAULT VALUES");
+  //dbconn->prepare("INSERT INTO workers DEFAULT VALUES");
 }
 void worker::setup_existing() {
 
