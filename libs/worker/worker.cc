@@ -16,7 +16,10 @@ std::string get_dbconn_string() {
   desc.add_options()("dbconnstring", po::value<std::string>(&dbconnstring));
   po::store(po::parse_config_file(settings_file, desc), vm);
   po::notify(vm);
-  std::cout << dbconnstring << std::endl;
+  if (dbconnstring.empty()) {
+    std::cerr << "fatal: failed to retrieve config.ini, aborting" << std::endl;
+    exit(1);
+  }
   return dbconnstring;
 }
 
@@ -43,7 +46,7 @@ worker::worker() {
       exit(1);
     }
   } catch (const std::exception &e) {
-    std::cerr << "connection to db failed: "<< e.what() << std::endl;
+    std::cerr << "connection to db failed: " << e.what() << std::endl;
     exit(1);
   }
 
