@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <string>
-#include <postgresql/libpq-fe.h>
+#include <libpq-fe.h>
 
 namespace hydra {
 

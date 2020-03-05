@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <postgresql/libpq-fe.h>
+#include <libpq-fe.h>
 #include <sys/stat.h>
 #include <cerrno>
 #include <iostream>
+
 static void
 exit_nicely(PGconn *conn) {
   PQfinish(conn);
