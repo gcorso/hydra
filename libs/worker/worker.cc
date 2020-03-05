@@ -6,8 +6,11 @@
 #include <iostream>
 #include <log.h>
 #include <sys/stat.h>
+#ifdef FEDORA
 #include <libpq-fe.h>
-
+#else
+#include <postgresql/libpq-fe.h>
+#endif
 namespace po = boost::program_options;
 
 namespace hydra::worker {

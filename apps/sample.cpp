@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef FEDORA
 #include <libpq-fe.h>
+#else
+#include <postgresql/libpq-fe.h>
+#endif
 #include <sys/stat.h>
 #include <cerrno>
 #include <iostream>
