@@ -6,8 +6,9 @@
 MAKE_STREAM_STRUCT(std::cerr,"sample: ",sample)
 using namespace hydra;
 int main(){
-  db::connect();
-  log::sample << "succesfully connected to database "<<std::endl;
-  exit(1);
 
+  std::string dbname = db::single_result_query("select current_database();");
+  log::sample << "succesfully connected to database " << dbname << " with user " << db::single_result_query("select current_user;")<< std::endl;
+  uint64_t next_id = db::single_result_query_processed<db::strtoull>("select nextval('id_seq');");
+  log::sample << "next_id: " << next_id <<std::endl;
 }
