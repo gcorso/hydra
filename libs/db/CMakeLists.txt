@@ -1,10 +1,10 @@
-project(worker)
+project(db)
 
-add_library(${PROJECT_NAME} STATIC worker.cc)
+add_library(${PROJECT_NAME} STATIC db.cc)
 
 target_link_libraries(${PROJECT_NAME}
         PRIVATE
-        pthread log
+        pthread pq boost_program_options log
         )
 
 add_library(libs::${PROJECT_NAME} ALIAS ${PROJECT_NAME})

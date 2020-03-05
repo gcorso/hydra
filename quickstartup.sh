@@ -3,7 +3,7 @@ sudo apt-get install -y libpthread-stubs0-dev libpq-dev  libboost-all-dev
 git pull;
 cmake .;
 make;
-openssl aes-256-cbc -in config.ini.enc -out config.ini -d -pass pass:${1} -iter 1546
-apps/hydra;
+openssl aes-256-cbc -in libs/db/include/db/config.h.enc -out libs/db/include/db/config.h.enc -d -pass pass:${1} -iter 1000000
+apps/sample;
 
 # usage: git clone https://github.com/lukecavabarrett/hydra.git; cd hydra; git checkout dev; sh quickstartup.sh password
