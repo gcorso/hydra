@@ -1,5 +1,5 @@
 sudo apt-get update -y
-sudo apt-get install -y libpthread-stubs0-dev postgresql libpq-dev libboost-all-dev
+sudo apt-get install -y libpthread-stubs0-dev postgresql libpq-dev libpqxx-dev libboost-all-dev
 git pull;
 cmake .;
 make;
