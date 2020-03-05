@@ -6,6 +6,8 @@
 #include <iostream>
 #include <log.h>
 #include <sys/stat.h>
+#include <libpq-fe.h>
+
 namespace po = boost::program_options;
 
 namespace hydra::worker {

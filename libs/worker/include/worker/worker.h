@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <string>
-#include <libpq-fe.h>
 
 namespace hydra {
 
@@ -11,7 +10,6 @@ namespace worker {
 
   extern uint64_t id;
   extern std::string nick;
-  extern PGconn * dbconn;
 void work();
 
 };
