@@ -4,11 +4,10 @@ project(hydra)
 
 set(CMAKE_CXX_STANDARD 17)
 
-#add_definitions(-DFEDORA)
+if (EXISTS /usr/include/libpq-fe.h)
+    add_definitions(-DFEDORA)
+endif ()
 
-#set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 add_subdirectory(libs)
 #add_subdirectory(tests)
 add_subdirectory(apps)
