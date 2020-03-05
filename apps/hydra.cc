@@ -1,6 +1,5 @@
 #include <worker/worker.h>
 
 int main() {
-  hydra::worker w;
-  w.run();
+  hydra::worker::work();
 }

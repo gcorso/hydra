@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <string>
-#include <pqxx/connection>
+#include <libpq-fe.h>
 
 namespace hydra {
 
@@ -11,7 +11,8 @@ namespace worker {
 
   extern uint64_t id;
   extern std::string nick;
-  extern pqxx::connection dbconn;
+  extern PGconn * dbconn;
+void work();
 
 };
 
