@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <postgres/libpq-fe.h>
+#include <postgresql/libpq-fe.h>
 #include <sys/stat.h>
 #include <cerrno>
 #include <iostream>
