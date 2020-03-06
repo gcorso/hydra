@@ -220,7 +220,7 @@ void marshall(const uint64_t execution_id) {
     ::close(err_pipe[WRITE]);
 
     //run
-    if (execlp("bash", "sh","-c", execution.command.c_str()) == -1) {
+    if (execlp("sh", "sh","-c", execution.command.c_str()) == -1) {
       std::perror("subprocess: execvp() failed");
       exit(-1);
     }
