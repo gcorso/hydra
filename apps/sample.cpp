@@ -14,16 +14,17 @@ int main(){
   std::string data = "\"S\\\xff";// three characters: quote, capital S, backslash
   assert(data.size()==4);
   db::execute_command("UPDATE executions SET stdout = stdout || $1::bytea WHERE id = 154",db::data_binder({{data.data(),data.size()}}));
-/*
+
   pid_t pid = fork();
 
   if(pid==0){
-    if (execlp("/bin/bash", "bash","-c", "sleep 4;echo Hello;sleep 2;") == -1) {
-      std::perror("subprocess: execvp() failed");
+    if (execlp("bash", "bash","-c", "sleep 4;echo Hello;sleep 2;", nullptr) == -1) {
+      std::perror("subprocess: execlp() failed");
       exit(-1);
     }
   }
-*/
+
+
   struct raii_char_str {
     raii_char_str(std::string s) : buf(s.c_str(), s.c_str() + s.size() + 1) {};
     operator char *() const { return &buf[0]; };
@@ -42,4 +43,5 @@ int main(){
     std::perror("subprocess: execvp() failed");
     exit(1);
   }
+
 }
