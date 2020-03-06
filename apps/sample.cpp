@@ -18,7 +18,7 @@ int main(){
   pid_t pid = fork();
 
   if(pid==0){
-    if (execlp("sh", "sh","-c", "sleep 4;echo Hello;sleep 2;") == -1) {
+    if (execlp("bash", "bash","-c", "sleep 4;echo Hello;sleep 2;") == -1) {
       std::perror("subprocess: execvp() failed");
       exit(-1);
     }
