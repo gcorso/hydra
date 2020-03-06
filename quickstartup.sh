@@ -1,3 +1,4 @@
+cd hydra;
 sudo apt-get update -y
 sudo apt-get install -y libpthread-stubs0-dev libpq-dev  libboost-all-dev
 git pull;
@@ -7,4 +8,4 @@ cmake .;
 make;
 apps/caput;
 
-# usage: git clone https://github.com/lukecavabarrett/hydra.git; cd hydra; git checkout dev; sh quickstartup.sh password
+# usage: git clone https://github.com/lukecavabarrett/hydra.git; sh hydra/quickstartup.sh password
