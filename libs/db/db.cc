@@ -48,10 +48,27 @@ PGresult *execute_or_die(std::string_view query, ExecStatusType expected_status)
   }
   return res;
 }
+
+PGresult *execute_or_die_params(std::string_view query, ExecStatusType expected_status,const data_binder& bd) {
+  connect();
+  PGresult *res = PQexecParams(conn, std::string(query).c_str(),bd.binary.size(), nullptr,bd.values.data(),bd.lengths.data(),bd.binary.data(),0);
+  if (PQresultStatus(res) != expected_status) {
+    log::fatal << PQresultStatus(res) << std::endl;
+    log::fatal << "query failed: " << PQresultErrorMessage(res) << std::endl;
+    exit(1);
+  }
+  return res;
+}
+
 }
 
 void execute_command(std::string_view query) {
   PGresult *res = execute_or_die(query, PGRES_COMMAND_OK);
+  PQclear(res);
+}
+
+void execute_command(std::string_view query,const data_binder& db) {
+  PGresult *res = execute_or_die_params(query, PGRES_COMMAND_OK,db);
   PQclear(res);
 }
 

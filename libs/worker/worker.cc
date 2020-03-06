@@ -230,7 +230,7 @@ void work() {
     sigint::handle_sigint(SIGINT);
   }
 
-  static constexpr size_t IDLENESS_LIMIT_CYCLE = 4, WORK_POLLING_CYCLE_LENGTH = 2;
+  static constexpr size_t IDLENESS_LIMIT_CYCLE = 5, WORK_POLLING_CYCLE_LENGTH = 2;
 
   size_t idle_cycles_left = IDLENESS_LIMIT_CYCLE;
 
