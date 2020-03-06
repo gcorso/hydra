@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <log.h>
 
-MAKE_STREAM_STRUCT(std::cerr, "db: ", db);
+MAKE_STREAM_STRUCT(std::cerr, "db: ", db)
 
 namespace hydra::db {
 
@@ -99,8 +99,8 @@ uint64_t single_uint64_query(std::string_view query) {
   return inline_single_result_query_processed<strtoull>(query);
 }
 
-uint64_t single_uint64_query_orelse(std::string_view query,const uint64_t fallback) {
-  return inline_single_result_query_processed_orelse<strtoull>(query,fallback);
+uint64_t single_uint64_query_orelse(std::string_view query, const uint64_t fallback) {
+  return inline_single_result_query_processed_orelse<strtoull>(query, fallback);
 }
 
 int count_rows(std::string_view query) {
@@ -112,5 +112,25 @@ int count_rows(std::string_view query) {
 inline uint64_t strtoull(const char *s) {
   return std::strtoull(s, nullptr, 10);
 }
+
+execution::execution(const uint64_t execution_id) {
+  PGresult *res = execute_or_die(std::string(
+      "select executions.id execution_id,executions.state_id execution_state, job_id, jobs.state_id job_state,session_id,sessions.state_id session_state,  checkpoint_policy_id, command, environment_id  from executions left join jobs on jobs.id=executions.job_id left join sessions on sessions.id=executions.session_id where executions.id = ").append(
+      std::to_string(execution_id)).append(";"), PGRES_TUPLES_OK);
+  if (PQntuples(res) != 1) {
+    log::fatal << " no execution matches id " << id << std::endl;
+    exit(1);
+  }
+  id = strtoull(PQgetvalue(res,0,0));
+  state = strtoull(PQgetvalue(res,0,1));
+  job_id = strtoull(PQgetvalue(res,0,2));
+  job_state = strtoull(PQgetvalue(res,0,3));
+  session_id = strtoull(PQgetvalue(res,0,4));
+  session_state = strtoull(PQgetvalue(res,0,5));
+  chekpoint_policy = strtoull(PQgetvalue(res,0,6));
+  command.assign(PQgetvalue(res,0,7));
+  environment_id = strtoull(PQgetvalue(res,0,8));
+  PQclear(res);
+};
 
 }

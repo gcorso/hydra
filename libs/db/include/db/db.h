@@ -17,6 +17,14 @@ int count_rows(std::string_view query);
 uint64_t single_uint64_query(std::string_view query);
 uint64_t single_uint64_query_orelse(std::string_view query,const uint64_t);
 
+struct execution {
+  uint64_t id,job_id,session_id,environment_id;
+  int state, session_state,job_state,chekpoint_policy;
+  std::string command;
+  execution() = delete;
+  execution(const uint64_t id);
+};
+
 }
 
 #endif //HYDRA_LIBS_DB_INCLUDE_DB_DB_H_

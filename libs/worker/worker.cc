@@ -7,7 +7,8 @@
 #include <cassert>
 #include <zconf.h>
 #include <sstream>
-#include "../db/include/db/db.h"
+#include <db/db.h>
+#include <marshall/marshall.h>
 
 namespace hydra::worker {
 
@@ -122,10 +123,13 @@ void try_start() {
   if (job_id == 0) return db::execute_command("COMMIT TRANSACTION;");
   status::execution_id = db::single_uint64_query(strjoin("insert into executions (session_id , job_id ) values (", status::session_id, ",", job_id, ") returning id;"));
   db::execute_command("COMMIT TRANSACTION;");
+  log::worker << "started execution "<<status::execution_id<<std::endl;
 }
 
 void close(){
   if(status::execution_id==0)return;
+
+  log::worker << "closing execution "<<status::execution_id<<std::endl;
   db::execute_command("BEGIN;");
   uint64_t job_id = db::single_uint64_query(strjoin("update executions set state_id = 5, time_end = current_timestamp(6) where id = ",status::execution_id," returning job_id;"));
   db::execute_command(strjoin("update jobs set state_id = 4 where id = ",job_id," ;"));
@@ -135,6 +139,8 @@ void close(){
 
 void drop(){
   if(status::execution_id==0)return;
+  log::worker << "dropping execution "<<status::execution_id<<std::endl;
+
   db::execute_command("BEGIN;");
   uint64_t job_id = db::single_uint64_query(strjoin("update executions set state_id = 3, time_end = current_timestamp(6) where id = ",status::execution_id," returning job_id;"));
   db::execute_command(strjoin("update jobs set state_id = 2 where id = ",job_id," ;"));
@@ -246,7 +252,7 @@ void work() {
     } else {
       status::location = status::L7;
       idle_cycles_left = IDLENESS_LIMIT_CYCLE;
-      //TODO: perform the work
+      marshall::marshall(status::execution_id);
       status::location = status::L8;
       execution::close();
       status::loc_t expl8 = status::L8;

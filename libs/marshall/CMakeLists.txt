@@ -1,10 +1,10 @@
-project(worker)
+project(marshall)
 
-add_library(${PROJECT_NAME} STATIC worker.cc)
+add_library(${PROJECT_NAME} STATIC marshall.cc)
 
 target_link_libraries(${PROJECT_NAME}
         PRIVATE
-        marshall db log
+        db log
         )
 
 add_library(libs::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
