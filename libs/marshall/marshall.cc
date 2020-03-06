@@ -184,6 +184,7 @@ struct pollvector {
 void marshall(const uint64_t execution_id) {
   db::execution execution(execution_id);
   log::marshall << "executing command \"" << execution.command << "\"" << std::endl;
+  return;
 
   //TODO: prepare environment and get fd of directory where the job shall be run
   //TODO: fork marshall/process
