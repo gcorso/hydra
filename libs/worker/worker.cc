@@ -248,11 +248,12 @@ void work() {
       status::location = status::L5;
       --idle_cycles_left;
       sleep(WORK_POLLING_CYCLE_LENGTH);
+      db::execute_command(strjoin("update sessions set time_last = current_timestamp(6) where id = ",status::session_id));
       status::location = status::L6;
     } else {
       status::location = status::L7;
       idle_cycles_left = IDLENESS_LIMIT_CYCLE;
-      marshall::marshall(status::execution_id);
+      marshall::marshall(status::execution_id,status::session_id);
       status::location = status::L8;
       execution::close();
       status::loc_t expl8 = status::L8;

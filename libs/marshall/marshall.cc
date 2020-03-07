@@ -88,7 +88,8 @@ struct stream_uploader : public dynamic_buffer {
     int rb = dynamic_buffer::read();
     assert(rb > 0);
     if (rb > 0)upload::append_stream(execution_id, streamname, buffer::data, rb);
-    std::cerr << streamname << "[" << std::string_view(buffer::data, rb) << "]" << streamname << std::endl;
+    //std::cerr << streamname << "[" << std::string_view(buffer::data, rb) << "]" << streamname << std::endl;
+    std::cerr<<std::string_view(buffer::data, rb)<<std::endl;
     return rb;
   }
 };
@@ -195,9 +196,7 @@ struct pollvector {
   auto size_active() { return nactive; }
   int poll(int timeout) {
     int retpoll = ::poll(fdtab, nactive, timeout);
-    std::cerr << "retpoll: " << retpoll << std::endl;
     if (retpoll > 0)nactive = phelper<0, Tp, Ts...>::poll_loop(ptrs, active, fdtab, fdtab, nactive);
-    std::cerr << "nactive: " << nactive << std::endl;
     return retpoll;
   }
 
@@ -270,7 +269,7 @@ void execute_process_request(json req) {
 
 }
 
-void marshall(const uint64_t execution_id) {
+void marshall(const uint64_t execution_id,const uint64_t session_id) {
   status::execution_id = execution_id;
   db::execution execution(execution_id);
   log::marshall << "executing command \"" << execution.command << "\"" << std::endl;
@@ -363,7 +362,9 @@ void marshall(const uint64_t execution_id) {
   stream_executor control_stream(open("/tmp/__hydra_control_pipe_out", O_RDONLY | O_NONBLOCK));
   pollvector pv(&su_out, &su_err, &control_stream);
   while (pv.size_active() > 1) {
-    if (pv.poll(2000) == 0)log::marshall << "timeout" << std::endl;;
+    pv.poll(60000);
+    //log::marshall << "alive" << std::endl;
+    db::execute_command(strjoin("update sessions set time_last = current_timestamp(6) where id = ",status::session_id));
   }
 
   int status = 0;
