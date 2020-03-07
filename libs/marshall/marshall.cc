@@ -10,12 +10,20 @@
 #include <tuple>
 #include <sstream>
 #include <cassert>
-#include <unordered_map>
 #include <unordered_set>
+#include <algorithm>
+#include <json.hpp>
+#include <fstream>
+#include <sys/mman.h>
 
 MAKE_STREAM_STRUCT(std::cerr, "marshall: ", marshall)
 
 namespace hydra::marshall {
+using nlohmann::json;
+
+namespace status {
+uint64_t execution_id;
+}
 
 namespace buffer {
 static constexpr int BUFFER_LENGTH = 1000000;
@@ -25,18 +33,17 @@ static char data[BUFFER_LENGTH];
 struct dynamic_buffer {
   int fd;
   dynamic_buffer(int fd_no) : fd(fd_no) {}
-  std::string content;
+  //std::string content;
   int read() {
     int read_bytes = ::read(fd, buffer::data, buffer::BUFFER_LENGTH);
     std::cerr << "fd" << fd << " read: " << read_bytes << " bytes! " << std::endl;
     if (read_bytes > 0) {
-      content.append(buffer::data, read_bytes);
-      //std::cerr << "fd"<<fd<<" received: "<<std::string_view(buffer::data,read_bytes);
+      //content.append(buffer::data, read_bytes);
+      //std::cerr << "fd" << fd << " received: " << std::string_view(buffer::data, read_bytes);
     }
     return read_bytes;
   }
   void close() { std::cerr << "fd" << fd << " closed." << std::endl; }
-  inline std::size_t size() { return content.size(); }
 };
 
 namespace {
@@ -74,7 +81,6 @@ void append_stream(const uint64_t execution_id, std::string_view streamname, cha
 }
 
 struct stream_uploader : public dynamic_buffer {
-  //using dynamic_buffer::dynamic_buffer;
   const uint64_t execution_id;
   const std::string_view streamname;
   stream_uploader(int fd, const uint64_t eid, std::string_view sn) : dynamic_buffer(fd), execution_id(eid), streamname(sn) {}
@@ -83,6 +89,28 @@ struct stream_uploader : public dynamic_buffer {
     assert(rb > 0);
     if (rb > 0)upload::append_stream(execution_id, streamname, buffer::data, rb);
     std::cerr << streamname << "[" << std::string_view(buffer::data, rb) << "]" << streamname << std::endl;
+    return rb;
+  }
+};
+
+void execute_process_request(json);
+
+struct stream_executor : public dynamic_buffer {
+  using dynamic_buffer::dynamic_buffer;
+  std::string buffered;
+  int read() {
+    int rb = dynamic_buffer::read();
+    assert(rb > 0);
+    char *b = buffer::data, *e = std::find(b, buffer::data + rb, 0);
+    buffered.append(b, e);
+    while (e != buffer::data + rb) {
+      //execute and empty buffer
+      execute_process_request(json::parse(buffered));
+      buffered.clear();
+      b = e + 1;
+      e = std::find(b, buffer::data + rb, 0);
+      buffered.append(b, e);
+    }
     return rb;
   }
 };
@@ -181,12 +209,12 @@ std::unordered_set<int> env_dirs;
 
 void make_env(int env_id) {
   //special case
+
+
   if (env_id == 0) {
-
-
     rmdir("/tmp/__hydraenv_0__");
-    if(mkdir("/tmp/__hydraenv_0__", 0777)){
-      log::fatal << "could not create directory: /tmp/__hydraenv_0__; errno: "<<errno<<std::endl;
+    if (mkdir("/tmp/__hydraenv_0__", 0777)) {
+      log::fatal << "could not create directory: /tmp/__hydraenv_0__; errno: " << errno << std::endl;
       exit(1);
     }
     return;
@@ -198,8 +226,8 @@ void make_env(int env_id) {
     return;
   }
 
-  if(mkdir(strjoin(" /tmp/__hydraenv_", env_id, "__").c_str(), 0777) && errno!=EEXIST){
-    log::fatal << "could not create directory: /tmp/__hydraenv_"<<env_id<<"__; errno: "<<errno<<std::endl;
+  if (mkdir(strjoin("/tmp/__hydraenv_", env_id, "__").c_str(), 0777) && errno != EEXIST) {
+    log::fatal << "could not create directory: /tmp/__hydraenv_" << env_id << "__; errno: " << errno << std::endl;
     exit(1);
   }
 
@@ -208,20 +236,86 @@ void make_env(int env_id) {
   env_dirs.insert(env_id);
 }
 
-void left_env() {
-
 }
+
+static constexpr std::string_view REQUEST_TYPE_KEY = "_request_type", LINKED_FILES_KEY = "_linked_files";
+
+void execute_process_request(json req) {
+  log::marshall << "got request" << req << std::endl;
+  if (req.find(REQUEST_TYPE_KEY) == req.end()) {
+    log::marshall << "got unvalid request" << std::endl;
+    return;
+  }
+  std::string_view rt = req.find(REQUEST_TYPE_KEY)->get<std::string_view>();
+  log::marshall << "request type: " << rt << std::endl;
+  if (rt != "save_checkpoint") {
+    log::marshall << "unknown request type: " << rt << std::endl;
+    return;
+  }
+  req.erase(req.find(REQUEST_TYPE_KEY));
+  auto linked_files = req.find(LINKED_FILES_KEY)->get<std::vector<std::string>>();
+  req.erase(req.find(LINKED_FILES_KEY));
+  db::execute_command("BEGIN;");
+  uint64_t checkpoint_id = db::single_uint64_query(strjoin("INSERT INTO checkpoints (execution_id,value) VALUES (", status::execution_id, ",'", req.dump(), "') returning id;"));
+  for (const std::string &path : linked_files) {
+    log::marshall << "adding file: " << path << std::endl;
+    struct stat s;
+    int fd = open(path.c_str(), O_RDONLY);
+    int status = fstat(fd, &s);
+    const char *f = (const char *) mmap(nullptr, s.st_size, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
+    db::execute_command(strjoin("INSERT INTO checkpoint_files (name,checkpoint_id,data) VALUES ('", basename(path.c_str()), "',", checkpoint_id, ", $1::bytea );"), db::data_binder({{f, s.st_size}}));
+    close(fd);
+  }
+  db::execute_command("COMMIT;");
 
 }
 
 void marshall(const uint64_t execution_id) {
+  status::execution_id = execution_id;
   db::execution execution(execution_id);
   log::marshall << "executing command \"" << execution.command << "\"" << std::endl;
 
-  //TODO: prepare environment and get fd of directory where the job shall be run
-  //TODO: fork marshall/process
-
   environment::make_env(execution.environment_id);
+  mkdir("/tmp/__hydra_resources__",0777);
+  system("rm -f /tmp/__hydra_checkpoint.json");
+  system("rm -f /tmp/__hydra_control_pipe_out");
+  mkfifo("/tmp/__hydra_control_pipe_out", 0666);
+
+  if (execution.chekpoint_policy) {
+    //put a checkpoint in place
+    db::checkpoint ck = db::checkpoint::retrieve(execution.job_id);
+    if (ck.id) {
+      //there's a checkpoint
+      json ckj = json::parse(ck.value);
+      std::ofstream content_file("/tmp/__hydra_checkpoint.json");
+      std::vector<std::string> retrieved_files;
+
+      //raw query
+      PGresult *res = PQexecParams(db::conn, strjoin("select id,name,data from checkpoint_files where checkpoint_id=", ck.id).c_str(),0,NULL,NULL,NULL,NULL,1);
+      if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        log::fatal << PQresultStatus(res) << std::endl;
+        log::fatal << "query failed: " << PQresultErrorMessage(res) << std::endl;
+        exit(1);
+      }
+      for (int i = 0; i < PQntuples(res); ++i) {
+        uint64_t id = db::raw_tou64(PQgetvalue(res,i,0));
+        mkdir(strjoin("/tmp/__hydra_resources__/",id).c_str(),0777);
+        std::string_view name(PQgetvalue(res,i,1),PQgetlength(res,i,1));
+        int fd = open(strjoin("/tmp/__hydra_resources__/",id,"/",name).c_str(),O_WRONLY|O_CREAT,0666);
+        write(fd,PQgetvalue(res,i,2),PQgetlength(res,i,2));
+        close(fd);
+        retrieved_files.push_back(strjoin("/tmp/__hydra_resources__/",id,"/",name));
+      }
+      PQclear(res);
+
+      //retrieve the files as well
+      ckj[std::string(LINKED_FILES_KEY)] = retrieved_files;
+      content_file << ckj.dump();
+      content_file.flush();
+      content_file.close();
+    }
+    //json ck = json::parse(db::single_result_query_orelse(strjoin("")));
+  }
 
   static constexpr int READ = 0, WRITE = 1;
   int out_pipe[2];
@@ -237,7 +331,7 @@ void marshall(const uint64_t execution_id) {
     //child process
 
     //change dir
-    chdir(strjoin("/tmp/__hydraenv_",execution.environment_id,"__").c_str());
+    chdir(strjoin("/tmp/__hydraenv_", execution.environment_id, "__").c_str());
 
     //remap used pipes
     if (dup2(out_pipe[WRITE], STDOUT_FILENO) == -1 ||
@@ -260,16 +354,15 @@ void marshall(const uint64_t execution_id) {
     }
 
   }
-  //parent process
 
   //close unused pipes
   ::close(out_pipe[WRITE]);
   ::close(err_pipe[WRITE]);
 
   stream_uploader su_out(out_pipe[READ], execution_id, "stdout"), su_err(err_pipe[READ], execution_id, "stderr");
-
-  pollvector pv(&su_out, &su_err);
-  while (pv.size_active()) {
+  stream_executor control_stream(open("/tmp/__hydra_control_pipe_out", O_RDONLY | O_NONBLOCK));
+  pollvector pv(&su_out, &su_err, &control_stream);
+  while (pv.size_active() > 1) {
     if (pv.poll(2000) == 0)log::marshall << "timeout" << std::endl;;
   }
 
