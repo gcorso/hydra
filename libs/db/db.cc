@@ -172,6 +172,7 @@ void keep_session_alive(const uint64_t session_id){
 }
 
 void clean_sessions(){
+  return;
   db::execute_command("BEGIN ISOLATION LEVEL SERIALIZABLE;");
   PGresult *res = execute_or_die("update sessions set state_id = 3 , time_end = current_timestamp(6) where state_id = 1 and time_last < current_timestamp(6) - interval '10  minutes' returning id ;",PGRES_TUPLES_OK);
   size_t N = PQntuples(res);
@@ -188,7 +189,16 @@ void clean_sessions(){
     PQclear(jobres);
   }
   PQclear(res);
-  db::execute_command("COMMIT TRANSACTION;");
+  res = PQexec(conn, "COMMIT TRANSACTION;");
+  if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+    log::db << "cleaning procedure of "<< N << "  died sessions was not possible "<<std::endl;
+    log::fatal << PQresultStatus(res) << std::endl;
+    log::fatal << "query failed: " << PQresultErrorMessage(res) << std::endl;
+    log::db << "Gabri tranquillo non e' un problema terribile "<<std::endl;
+    PQclear(res);
+    return;
+  }
+  PQclear(res);
   log::db << "cleaning procedure of "<< N << "  died sessions went well"<<std::endl;
 }
 
