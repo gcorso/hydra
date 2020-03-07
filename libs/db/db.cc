@@ -173,7 +173,7 @@ void keep_session_alive(const uint64_t session_id){
 
 void clean_sessions(){
   db::execute_command("BEGIN ISOLATION LEVEL SERIALIZABLE;");
-  PGresult *res = execute_or_die("update sessions set state_id = 3 , time_end = current_timestamp(6) where state_id = 1 and time_last < current_timestamp(6) - interval '2  minutes' returning id ;",PGRES_TUPLES_OK);
+  PGresult *res = execute_or_die("update sessions set state_id = 3 , time_end = current_timestamp(6) where state_id = 1 and time_last < current_timestamp(6) - interval '10  minutes' returning id ;",PGRES_TUPLES_OK);
   size_t N = PQntuples(res);
   log::db << "cleaning "<< N << "  died sessions "<<std::endl;
   for(int i=0;i<N;i++){
