@@ -1,10 +1,40 @@
 #include <db/db.h>
 #include <cstdlib>
 #include <log.h>
+#include <sstream>
 
 MAKE_STREAM_STRUCT(std::cerr, "db: ", db)
 
+
 namespace hydra::db {
+
+namespace {
+
+namespace util {
+template<typename ...Args>
+struct joiner;
+template<>
+struct joiner<> {
+  static inline void append_to(std::stringstream &cref) { return; }
+};
+template<typename T, typename...Ts>
+struct joiner<T, Ts...> {
+  static inline void append_to(std::stringstream &cref, const T &t, Ts &&... ts) {
+    cref << t;
+    joiner<Ts...>::append_to(cref, std::forward<Ts>(ts)...);
+  }
+};
+
+}
+
+template<typename ...Ts>
+std::string strjoin(Ts &&... ts) {
+  std::stringstream ss;
+  util::joiner<Ts...>::append_to(ss, std::forward<Ts>(ts)...);
+  return ss.str();
+}
+
+}
 
 namespace helper {
 struct disconnector {
@@ -83,6 +113,23 @@ std::string single_result_query(std::string_view query) {
   return result;
 }
 
+std::string single_result_query_orelse(std::string_view query,std::string_view def){
+  PGresult *res = execute_or_die(query, PGRES_TUPLES_OK);
+  if (PQntuples(res) > 1 || PQnfields(res) != 1) {
+    log::fatal << "returned unexpected number of results: " << query << std::endl;
+    exit(1);
+  }
+  if(PQntuples(res)==0){
+    std::string result(def);
+    PQclear(res);
+    return result;
+  }
+  std::string result(PQgetvalue(res, 0, 0));
+  PQclear(res);
+  return result;
+}
+
+
 template<auto F>
 inline auto inline_single_result_query_processed(std::string_view query) {
   PGresult *res = execute_or_die(query, PGRES_TUPLES_OK);
@@ -130,6 +177,18 @@ inline uint64_t strtoull(const char *s) {
   return std::strtoull(s, nullptr, 10);
 }
 
+uint64_t raw_tou64(const char *c) {
+  const uint8_t* array = (uint8_t*)c;
+  return static_cast<uint64_t>(array[7]) |
+          static_cast<uint64_t>(array[6]) << 8 |
+          static_cast<uint64_t>(array[5]) << 16 |
+          static_cast<uint64_t>(array[4]) << 24 |
+          static_cast<uint64_t>(array[3]) << 32 |
+          static_cast<uint64_t>(array[2]) << 40 |
+          static_cast<uint64_t>(array[1]) << 48 |
+          static_cast<uint64_t>(array[0]) << 56;
+}
+
 execution::execution(const uint64_t execution_id) {
   PGresult *res = execute_or_die(std::string(
       "select executions.id execution_id,executions.state_id execution_state, job_id, jobs.state_id job_state,session_id,sessions.state_id session_state,  checkpoint_policy_id, command, environment_id  from executions left join jobs on jobs.id=executions.job_id left join sessions on sessions.id=executions.session_id where executions.id = ").append(
@@ -149,5 +208,16 @@ execution::execution(const uint64_t execution_id) {
   environment_id = strtoull(PQgetvalue(res,0,8));
   PQclear(res);
 };
+
+checkpoint checkpoint::retrieve(uint64_t job_id) {
+  PGresult *res = execute_or_die(strjoin("select checkpoints.id checkpoint_id,value from checkpoints left join executions on executions.id=checkpoints.execution_id left join jobs on jobs.id=executions.job_id where job_id = ",job_id," ORDER BY time DESC,checkpoint_id DESC LIMIT 1"),PGRES_TUPLES_OK);
+  if (PQntuples(res) == 0) {
+    PQclear(res);
+    return checkpoint{.id=0,.value=""};
+  }
+  checkpoint ck{.id=strtoull(PQgetvalue(res,0,0)),.value=PQgetvalue(res,0,1)};
+  PQclear(res);
+  return ck;
+}
 
 }

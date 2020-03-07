@@ -11,11 +11,13 @@ namespace hydra::db{
 
 struct data_binder;
 inline uint64_t strtoull(const char *s);
+uint64_t raw_tou64(const char *c);
 
 extern PGconn *conn;
 void connect();
 void disconnect();
 std::string single_result_query(std::string_view query);
+std::string single_result_query_orelse(std::string_view query,std::string_view def = "");
 void execute_command(std::string_view);
 void execute_command(std::string_view,const data_binder&);
 int count_rows(std::string_view query);
@@ -30,6 +32,11 @@ struct execution {
   execution(const uint64_t id);
 };
 
+struct checkpoint {
+  uint64_t id;
+  std::string value;
+  static checkpoint retrieve(uint64_t job_id);
+};
 
 
 struct data_binder{
