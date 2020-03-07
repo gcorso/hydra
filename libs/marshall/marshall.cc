@@ -364,7 +364,7 @@ void marshall(const uint64_t execution_id,const uint64_t session_id) {
   while (pv.size_active() > 1) {
     pv.poll(60000);
     //log::marshall << "alive" << std::endl;
-    db::execute_command(strjoin("update sessions set time_last = current_timestamp(6) where id = ",status::session_id));
+    db::execute_command(strjoin("update sessions set time_last = current_timestamp(6) where id = ",session_id));
   }
 
   int status = 0;
