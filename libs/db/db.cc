@@ -167,6 +167,11 @@ uint64_t single_uint64_query_orelse(std::string_view query, const uint64_t fallb
   return inline_single_result_query_processed_orelse<strtoull>(query, fallback);
 }
 
+void keep_session_alive(const uint64_t session_id){
+  db::execute_command(strjoin("update sessions set time_last = current_timestamp(6) where id = ",session_id));
+}
+
+
 int count_rows(std::string_view query) {
   PGresult *res = execute_or_die(query, PGRES_TUPLES_OK);
   int rows = PQntuples(res);

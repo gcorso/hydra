@@ -230,7 +230,7 @@ void work() {
     sigint::handle_sigint(SIGINT);
   }
 
-  static constexpr size_t IDLENESS_LIMIT_CYCLE = 2*6*10, WORK_POLLING_CYCLE_LENGTH = 5;
+  static constexpr size_t IDLENESS_LIMIT_CYCLE = 20, WORK_POLLING_CYCLE_LENGTH = 30;
 
   size_t idle_cycles_left = IDLENESS_LIMIT_CYCLE;
 
@@ -244,11 +244,11 @@ void work() {
       sigint::handle_sigint(SIGINT);
     }
     if (status::execution_id == 0) {
-      log::worker << "no job assigned, will try again" << std::endl;
+      log::worker << "no job assigned, will try again "<<idle_cycles_left<<" times." << std::endl;
       status::location = status::L5;
       --idle_cycles_left;
       sleep(WORK_POLLING_CYCLE_LENGTH);
-      db::execute_command(strjoin("update sessions set time_last = current_timestamp(6) where id = ",status::session_id));
+      db::keep_session_alive(status::session_id);
       status::location = status::L6;
     } else {
       status::location = status::L7;

@@ -23,6 +23,7 @@ void execute_command(std::string_view,const data_binder&);
 int count_rows(std::string_view query);
 uint64_t single_uint64_query(std::string_view query);
 uint64_t single_uint64_query_orelse(std::string_view query,const uint64_t);
+void keep_session_alive(const uint64_t);
 
 struct execution {
   uint64_t id,job_id,session_id,environment_id;
