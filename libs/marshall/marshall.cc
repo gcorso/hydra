@@ -36,14 +36,14 @@ struct dynamic_buffer {
   //std::string content;
   int read() {
     int read_bytes = ::read(fd, buffer::data, buffer::BUFFER_LENGTH);
-    std::cerr << "fd" << fd << " read: " << read_bytes << " bytes! " << std::endl;
+    //std::cerr << "fd" << fd << " read: " << read_bytes << " bytes! " << std::endl;
     if (read_bytes > 0) {
       //content.append(buffer::data, read_bytes);
       //std::cerr << "fd" << fd << " received: " << std::string_view(buffer::data, read_bytes);
     }
     return read_bytes;
   }
-  void close() { std::cerr << "fd" << fd << " closed." << std::endl; }
+  void close() { /*std::cerr << "fd" << fd << " closed." << std::endl;*/ }
 };
 
 namespace {
@@ -246,7 +246,7 @@ void execute_process_request(json req) {
     return;
   }
   std::string_view rt = req.find(REQUEST_TYPE_KEY)->get<std::string_view>();
-  log::marshall << "request type: " << rt << std::endl;
+  //log::marshall << "request type: " << rt << std::endl;
   if (rt != "save_checkpoint") {
     log::marshall << "unknown request type: " << rt << std::endl;
     return;
