@@ -89,7 +89,7 @@ struct stream_uploader : public dynamic_buffer {
     assert(rb > 0);
     if (rb > 0)upload::append_stream(execution_id, streamname, buffer::data, rb);
     //std::cerr << streamname << "[" << std::string_view(buffer::data, rb) << "]" << streamname << std::endl;
-    std::cerr<<std::string_view(buffer::data, rb)<<std::endl;
+    std::cerr<<std::string_view(buffer::data, rb);
     return rb;
   }
 };
