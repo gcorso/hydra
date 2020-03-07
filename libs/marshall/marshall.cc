@@ -362,7 +362,7 @@ void marshall(const uint64_t execution_id,const uint64_t session_id) {
   stream_executor control_stream(open("/tmp/__hydra_control_pipe_out", O_RDONLY | O_NONBLOCK));
   pollvector pv(&su_out, &su_err, &control_stream);
   while (pv.size_active() > 1) {
-    pv.poll(60000);
+    pv.poll(10000);
     //log::marshall << "alive" << std::endl;
     db::execute_command(strjoin("update sessions set time_last = current_timestamp(6) where id = ",session_id));
   }
