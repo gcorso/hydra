@@ -171,6 +171,27 @@ void keep_session_alive(const uint64_t session_id){
   db::execute_command(strjoin("update sessions set time_last = current_timestamp(6) where id = ",session_id));
 }
 
+void clean_sessions(){
+  db::execute_command("BEGIN ISOLATION LEVEL SERIALIZABLE;");
+  PGresult *res = execute_or_die("update sessions set state_id = 3 , time_end = current_timestamp(6) where state_id = 1 and time_last < current_timestamp(6) - interval '2  minutes' returning id ;",PGRES_TUPLES_OK);
+  size_t N = PQntuples(res);
+  log::db << "cleaning "<< N << "  died sessions "<<std::endl;
+  for(int i=0;i<N;i++){
+    const uint64_t session_id = strtoull(PQgetvalue(res,i,0));
+    log::db << "cleaning session_id:  "<< session_id << std::endl;
+    PGresult *jobres = execute_or_die(strjoin("update executions set time_end = current_timestamp(6), state_id = 4 where session_id = ",session_id," and state_id = 2  returning job_id ;"),PGRES_TUPLES_OK);
+    for(int j=0;j<PQntuples(jobres);++j){
+      const uint64_t job_id = strtoull(PQgetvalue(jobres,j,0));
+      log::db << "cleaning job_id:  "<< job_id << std::endl;
+      execute_command(strjoin("update jobs set state_id = 2 where state_id = 3 and id = ",job_id));
+    }
+    PQclear(jobres);
+  }
+  PQclear(res);
+  db::execute_command("COMMIT TRANSACTION;");
+  log::db << "cleaning procedure of "<< N << "  died sessions went well"<<std::endl;
+}
+
 
 int count_rows(std::string_view query) {
   PGresult *res = execute_or_die(query, PGRES_TUPLES_OK);

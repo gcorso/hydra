@@ -363,7 +363,7 @@ void marshall(const uint64_t execution_id,const uint64_t session_id) {
   pollvector pv(&su_out, &su_err, &control_stream);
   db::keep_session_alive(session_id);
   while (pv.size_active() > 1) {
-    pv.poll(10000);
+    pv.poll(60000);
     //log::marshall << "alive" << std::endl;
     db::keep_session_alive(session_id);
   }

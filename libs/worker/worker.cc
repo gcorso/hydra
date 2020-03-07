@@ -234,6 +234,7 @@ void work() {
 
   size_t idle_cycles_left = IDLENESS_LIMIT_CYCLE;
 
+  db::clean_sessions();
   while (idle_cycles_left) {
     status::location = status::L3;
     execution::try_start();
@@ -249,6 +250,7 @@ void work() {
       --idle_cycles_left;
       sleep(WORK_POLLING_CYCLE_LENGTH);
       db::keep_session_alive(status::session_id);
+      db::clean_sessions();
       status::location = status::L6;
     } else {
       status::location = status::L7;
