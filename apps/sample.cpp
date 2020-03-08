@@ -13,5 +13,5 @@ using namespace hydra;
 int main(){
   db::connect();
   log::sample << "connected" << std::endl;
-
+  db::clean_sessions();
 }

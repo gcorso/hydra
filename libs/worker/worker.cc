@@ -118,9 +118,10 @@ void close() {
 
 namespace execution {
 void try_start() {
-  db::execute_command("BEGIN ISOLATION LEVEL SERIALIZABLE;");
-  uint64_t job_id = db::single_uint64_query_orelse("UPDATE jobs SET state_id = 3 WHERE id = (SELECT id FROM jobs WHERE state_id = 2 LIMIT 1)RETURNING id;", 0);
+  db::execute_command("BEGIN;");
+  uint64_t job_id = db::single_uint64_query_orelse("SELECT id FROM jobs WHERE state_id = 2 ORDER BY id FOR UPDATE SKIP LOCKED  LIMIT 1;");
   if (job_id == 0) return db::execute_command("COMMIT TRANSACTION;");
+  db::execute_command(strjoin("UPDATE jobs set state_id=3 WHERE id = ",job_id,";"));
   status::execution_id = db::single_uint64_query(strjoin("insert into executions (session_id , job_id ) values (", status::session_id, ",", job_id, ") returning id;"));
   db::execute_command("COMMIT TRANSACTION;");
   log::worker << "started execution "<<status::execution_id<<std::endl;
@@ -128,7 +129,6 @@ void try_start() {
 
 void close(){
   if(status::execution_id==0)return;
-
   log::worker << "closing execution "<<status::execution_id<<std::endl;
   db::execute_command("BEGIN;");
   uint64_t job_id = db::single_uint64_query(strjoin("update executions set state_id = 5, time_end = current_timestamp(6) where id = ",status::execution_id," returning job_id;"));
@@ -140,7 +140,6 @@ void close(){
 void drop(){
   if(status::execution_id==0)return;
   log::worker << "dropping execution "<<status::execution_id<<std::endl;
-
   db::execute_command("BEGIN;");
   uint64_t job_id = db::single_uint64_query(strjoin("update executions set state_id = 3, time_end = current_timestamp(6) where id = ",status::execution_id," returning job_id;"));
   db::execute_command(strjoin("update jobs set state_id = 2 where id = ",job_id," ;"));
