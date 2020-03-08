@@ -119,30 +119,30 @@ void close() {
 namespace execution {
 void try_start() {
   db::execute_command("BEGIN;");
-  uint64_t job_id = db::single_uint64_query_orelse("SELECT id FROM jobs WHERE state_id = 2 ORDER BY id FOR UPDATE SKIP LOCKED  LIMIT 1;");
+  uint64_t job_id = db::single_uint64_query_orelse("SELECT id FROM jobs WHERE state_id = 2 ORDER BY id FOR UPDATE SKIP LOCKED  LIMIT 1;", 0);
   if (job_id == 0) return db::execute_command("COMMIT TRANSACTION;");
-  db::execute_command(strjoin("UPDATE jobs set state_id=3 WHERE id = ",job_id,";"));
+  db::execute_command(strjoin("UPDATE jobs set state_id=3 WHERE id = ", job_id, ";"));
   status::execution_id = db::single_uint64_query(strjoin("insert into executions (session_id , job_id ) values (", status::session_id, ",", job_id, ") returning id;"));
   db::execute_command("COMMIT TRANSACTION;");
-  log::worker << "started execution "<<status::execution_id<<std::endl;
+  log::worker << "started execution " << status::execution_id << std::endl;
 }
 
-void close(){
-  if(status::execution_id==0)return;
-  log::worker << "closing execution "<<status::execution_id<<std::endl;
+void close() {
+  if (status::execution_id == 0)return;
+  log::worker << "closing execution " << status::execution_id << std::endl;
   db::execute_command("BEGIN;");
-  uint64_t job_id = db::single_uint64_query(strjoin("update executions set state_id = 5, time_end = current_timestamp(6) where id = ",status::execution_id," returning job_id;"));
-  db::execute_command(strjoin("update jobs set state_id = 4 where id = ",job_id," ;"));
+  uint64_t job_id = db::single_uint64_query(strjoin("update executions set state_id = 5, time_end = current_timestamp(6) where id = ", status::execution_id, " returning job_id;"));
+  db::execute_command(strjoin("update jobs set state_id = 4 where id = ", job_id, " ;"));
   db::execute_command("COMMIT;");
   status::execution_id = 0;
 }
 
-void drop(){
-  if(status::execution_id==0)return;
-  log::worker << "dropping execution "<<status::execution_id<<std::endl;
+void drop() {
+  if (status::execution_id == 0)return;
+  log::worker << "dropping execution " << status::execution_id << std::endl;
   db::execute_command("BEGIN;");
-  uint64_t job_id = db::single_uint64_query(strjoin("update executions set state_id = 3, time_end = current_timestamp(6) where id = ",status::execution_id," returning job_id;"));
-  db::execute_command(strjoin("update jobs set state_id = 2 where id = ",job_id," ;"));
+  uint64_t job_id = db::single_uint64_query(strjoin("update executions set state_id = 3, time_end = current_timestamp(6) where id = ", status::execution_id, " returning job_id;"));
+  db::execute_command(strjoin("update jobs set state_id = 2 where id = ", job_id, " ;"));
   db::execute_command("COMMIT;");
   status::execution_id = 0;
 }
@@ -244,7 +244,7 @@ void work() {
       sigint::handle_sigint(SIGINT);
     }
     if (status::execution_id == 0) {
-      log::worker << "no job assigned, will try again "<<idle_cycles_left<<" times." << std::endl;
+      log::worker << "no job assigned, will try again " << idle_cycles_left << " times." << std::endl;
       status::location = status::L5;
       --idle_cycles_left;
       sleep(WORK_POLLING_CYCLE_LENGTH);
@@ -254,7 +254,7 @@ void work() {
     } else {
       status::location = status::L7;
       idle_cycles_left = IDLENESS_LIMIT_CYCLE;
-      marshall::marshall(status::execution_id,status::session_id);
+      marshall::marshall(status::execution_id, status::session_id);
       status::location = status::L8;
       execution::close();
       status::loc_t expl8 = status::L8;
