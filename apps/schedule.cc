@@ -12,8 +12,6 @@ int main(){
     std::string cmd = std::string("INSERT INTO jobs (command,environment_id,checkpoint_policy_id) VALUES ('").append(line).append("',219,1);");
     std::cout << cmd << std::endl;
     hydra::db::execute_command(cmd);
-    //hydra::db::execute_command(std::string("INSERT INTO jobs (command,environment_id,checkpoint_policy_id) VALUES ('").append(line).append("',219,1);"));
-    //std::cout << "["<<line<<"]" << std::endl;
   }
   return 0;
 }

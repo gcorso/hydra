@@ -1,0 +1,3 @@
+    select sessions.worker_id wid, sessions.id sid, sessions_states.descr sstate, sessions.time_last slast, jobs.id jid, jobs_states.descr jstate,  last_executions.id xid, executions_states.descr xstate, last_executions.exit_code
+    from sessions left join sessions_states on sessions_states.id = sessions.state_id left join last_executions on sessions.id=last_executions.session_id
+    left join jobs on jobs.id=last_executions.job_id left join jobs_states on jobs_states.id=jobs.state_id left join executions_states on last_executions.state_id = executions_states.id order by sessions.time_last desc;
