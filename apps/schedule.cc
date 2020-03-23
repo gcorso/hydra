@@ -9,7 +9,7 @@ int main(){
     if(line.empty())continue;
     if(std::find(line.begin(),line.end(),'#')!=line.end())continue;
     if(std::find(line.begin(),line.end(),'\'')!=line.end())throw;
-    std::string cmd = std::string("INSERT INTO jobs (command,environment_id,checkpoint_policy_id) VALUES ('").append(line).append("',219,1);");
+    std::string cmd = std::string("INSERT INTO jobs (command,environment_id,checkpoint_policy_id,state_id) VALUES ('").append(line).append("',219,1,2);");
     std::cout << cmd << std::endl;
     hydra::db::execute_command(cmd);
   }
