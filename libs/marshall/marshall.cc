@@ -272,6 +272,7 @@ void execute_process_request(json req) {
 void marshall(const uint64_t execution_id,const uint64_t session_id) {
   status::execution_id = execution_id;
   db::execution execution(execution_id);
+  log::marshall << "running job "<<execution.job_id << std::endl;
   log::marshall << "executing command \"" << execution.command << "\"" << std::endl;
 
   environment::make_env(execution.environment_id);
