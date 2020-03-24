@@ -7,3 +7,6 @@ target_link_libraries(caput worker)
 
 add_executable(schedule schedule.cc)
 target_link_libraries(schedule db log)
+
+add_executable(cleaner cleaner.cc)
+target_link_libraries(cleaner db log)

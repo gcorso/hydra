@@ -231,7 +231,7 @@ void make_env(int env_id) {
   }
 
   std::string gitlink = db::single_result_query(strjoin("SELECT gitlink FROM environments WHERE id = ", env_id));
-  system(strjoin("git lfs clone ", gitlink, " /tmp/__hydraenv_", env_id, "__; git -C /tmp/__hydraenv_", env_id, "__ pull -p; git -C /tmp/__hydraenv_", env_id, "__ clean -f -d;").c_str());
+  system(strjoin("git clone ", gitlink, " /tmp/__hydraenv_", env_id, "__; git -C /tmp/__hydraenv_", env_id, "__ pull -p; git -C /tmp/__hydraenv_", env_id, "__ clean -f -d;").c_str());
   env_dirs.insert(env_id);
 }
 
