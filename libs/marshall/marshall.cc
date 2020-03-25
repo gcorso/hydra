@@ -22,7 +22,7 @@ namespace hydra::marshall {
 using nlohmann::json;
 
 namespace status {
-uint64_t execution_id;
+uint64_t execution_id,job_id;
 }
 
 namespace buffer {
@@ -255,6 +255,7 @@ void execute_process_request(json req) {
   auto linked_files = req.find(LINKED_FILES_KEY)->get<std::vector<std::string>>();
   req.erase(req.find(LINKED_FILES_KEY));
   db::execute_command("BEGIN;");
+  db::execute_command(strjoin("delete from checkpoints where id in (select checkpoints.id from checkpoints left join executions on executions.id = checkpoints.execution_id where executions.job_id = ",status::job_id,");"));
   uint64_t checkpoint_id = db::single_uint64_query(strjoin("INSERT INTO checkpoints (execution_id,value) VALUES (", status::execution_id, ",'", req.dump(), "') returning id;"));
   for (const std::string &path : linked_files) {
     log::marshall << "adding file: " << path << std::endl;
@@ -272,6 +273,8 @@ void execute_process_request(json req) {
 void marshall(const uint64_t execution_id,const uint64_t session_id) {
   status::execution_id = execution_id;
   db::execution execution(execution_id);
+  status::job_id = execution.job_id;
+
   log::marshall << "running job "<<execution.job_id << std::endl;
   log::marshall << "executing command \"" << execution.command << "\"" << std::endl;
 
@@ -374,6 +377,5 @@ void marshall(const uint64_t execution_id,const uint64_t session_id) {
   int exit_code = WEXITSTATUS(status);
   log::marshall << "exit_code: " << exit_code << std::endl;
   db::execute_command(strjoin("UPDATE executions SET exit_code = ", exit_code, " WHERE id= ", execution_id));
-
 }
 }

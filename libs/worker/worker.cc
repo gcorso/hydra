@@ -133,6 +133,7 @@ void close() {
   db::execute_command("BEGIN;");
   uint64_t job_id = db::single_uint64_query(strjoin("update executions set state_id = 5, time_end = current_timestamp(6) where id = ", status::execution_id, " returning job_id;"));
   db::execute_command(strjoin("update jobs set state_id = 4 where id = ", job_id, " ;"));
+  db::execute_command(strjoin("delete from checkpoints where id in (select checkpoints.id from checkpoints left join executions on executions.id = checkpoints.execution_id where executions.job_id = ",job_id,");"));
   db::execute_command("COMMIT;");
   status::execution_id = 0;
 }
