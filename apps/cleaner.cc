@@ -4,6 +4,7 @@
 
 int main(){
   hydra::db::clean_sessions();
+  return 0;
   while(true) {
     uint64_t id = hydra::db::single_uint64_query_orelse("select id from checkpoints limit 1 ", 0);
     if(!id)break;
