@@ -335,6 +335,13 @@ void marshall(const uint64_t execution_id,const uint64_t session_id) {
 
     //change dir
     chdir(strjoin("/tmp/__hydraenv_", execution.environment_id, "__").c_str());
+    if(execution.job_id==11030){
+      log::marshall << "special case for old job 11030"<<std::endl;
+      log::marshall << "pray that everything will go fine"<<std::endl;
+      bool success = system("git checkout 519af18cc5c5b5c8ea252b0cbb2528fec5d660bd")==0;
+      log::marshall << "did it?"<<std::endl;
+      log::marshall << (success ? "YEAH" : "FAILED, kill the worker") <<std::endl;
+    }
 
     //remap used pipes
     if (dup2(out_pipe[WRITE], STDOUT_FILENO) == -1 ||
