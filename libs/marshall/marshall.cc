@@ -127,7 +127,7 @@ struct stream_uploader_pro : public dynamic_buffer {
     bool should_upd = false;
     if(!write_on.empty()){
       //remove last n
-      db::execute_command(strjoin("UPDATE executions SET ", streamname, " = left(", streamname, ",-",tail_n,") WHERE id = ", execution_id));
+      if(tail_n)db::execute_command(strjoin("UPDATE executions SET ", streamname, " = substring(", streamname, ",0,length(",streamname,")-",tail_n,") WHERE id = ", execution_id));
       tail_n = 0;
       // attach write on
       db::execute_command(strjoin("UPDATE executions SET ", streamname, " = ", streamname, " || $1::bytea WHERE id = ", execution_id), db::data_binder({{write_on.data(), write_on.size()}}));
