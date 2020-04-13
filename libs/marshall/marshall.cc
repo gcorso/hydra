@@ -133,7 +133,7 @@ struct stream_uploader_pro : public dynamic_buffer {
       db::execute_command(strjoin("UPDATE executions SET ", streamname, " = ", streamname, " || $1::bytea WHERE id = ", execution_id), db::data_binder({{write_on.data(), write_on.size()}}));
       should_upd = true;
     }
-    if(time(NULL)-last_upd>20000)should_upd=true;
+    if(time(NULL)-last_upd>20)should_upd=true;
     if(should_upd){
       last_upd=time(NULL);
       db::execute_command(strjoin("UPDATE executions SET ", streamname, " = ", streamname, " || $1::bytea WHERE id = ", execution_id), db::data_binder({{tail.data(), tail.size()}}));
