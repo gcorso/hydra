@@ -15,7 +15,7 @@ int main(){
     if(command.front()=='#')continue;
     if(std::find(command.begin(),command.end(),'\'')!=command.end())throw;
     std::cout<< "Scheduling: " << '"' << command << std::endl << '"' << "... ";
-    std::string cmd = std::string("INSERT INTO jobs (command,environment_id,checkpoint_policy_id,state_id) VALUES ('").append(command).append("',219,1,2);");
+    std::string cmd = std::string("INSERT INTO jobs (command,environment_id,checkpoint_policy_id,state_id) VALUES ('").append(command).append("',314,1,2);");
     //std::cout << cmd << std::endl;
     hydra::db::execute_command(cmd);
     std::cout << "done!" << std::endl;
