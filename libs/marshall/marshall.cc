@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <json.hpp>
 #include <fstream>
+#include <chrono>
 #include <sys/mman.h>
 
 MAKE_STREAM_STRUCT(std::cerr, "marshall: ", marshall)
@@ -88,11 +89,62 @@ struct stream_uploader : public dynamic_buffer {
     int rb = dynamic_buffer::read();
     assert(rb > 0);
     if (rb > 0)upload::append_stream(execution_id, streamname, buffer::data, rb);
-    //std::cerr << streamname << "[" << std::string_view(buffer::data, rb) << "]" << streamname << std::endl;
     std::cerr<<std::string_view(buffer::data, rb);
     return rb;
   }
 };
+
+struct stream_uploader_pro : public dynamic_buffer {
+  const uint64_t execution_id;
+  const std::string_view streamname;
+  stream_uploader_pro(int fd, const uint64_t eid, std::string_view sn) : dynamic_buffer(fd), execution_id(eid), streamname(sn) {}
+  uint32_t tail_n;
+  std::string tail;
+  uint32_t last_upd=0;
+
+  // at any moment (outside of read), DB contains (some text + \n) * + a prefix of length n of tail.
+  // tail shall not contains newlines
+  // we want to update DB on two occasions: newline, timer
+  int read() {
+
+    int rb = dynamic_buffer::read();
+    assert(rb > 0);
+    std::string write_on;
+    for(int i=0;i<rb;++i){
+      char c = buffer::data[i];
+      if(c=='\n'){
+        //save
+        write_on.append(std::move(tail));
+        tail.clear();
+      } else if(c=='\r'){
+        //erase
+        tail.clear();
+      } else {
+        //push
+        tail.push_back(c);
+      }
+    }
+    bool should_upd = false;
+    if(!write_on.empty()){
+      //remove last n
+      db::execute_command(strjoin("UPDATE executions SET ", streamname, " = left(", streamname, ",-",tail_n,") WHERE id = ", execution_id));
+      tail_n = 0;
+      // attach write on
+      db::execute_command(strjoin("UPDATE executions SET ", streamname, " = ", streamname, " || $1::bytea WHERE id = ", execution_id), db::data_binder({{write_on.data(), write_on.size()}}));
+      should_upd = true;
+    }
+    if(time(NULL)-last_upd>20000)should_upd=true;
+    if(should_upd){
+      last_upd=time(NULL);
+      db::execute_command(strjoin("UPDATE executions SET ", streamname, " = ", streamname, " || $1::bytea WHERE id = ", execution_id), db::data_binder({{tail.data(), tail.size()}}));
+      tail_n = tail.size();
+    }
+    std::cerr<<std::string_view(buffer::data, rb);
+    return rb;
+  }
+};
+
+
 
 void execute_process_request(json);
 
@@ -365,7 +417,7 @@ void marshall(const uint64_t execution_id,const uint64_t session_id) {
   ::close(out_pipe[WRITE]);
   ::close(err_pipe[WRITE]);
 
-  stream_uploader su_out(out_pipe[READ], execution_id, "stdout"), su_err(err_pipe[READ], execution_id, "stderr");
+  stream_uploader_pro su_out(out_pipe[READ], execution_id, "stdout"), su_err(err_pipe[READ], execution_id, "stderr");
   stream_executor control_stream(open("/tmp/__hydra_control_pipe_out", O_RDONLY | O_NONBLOCK));
   pollvector pv(&su_out, &su_err, &control_stream);
   db::keep_session_alive(session_id);
