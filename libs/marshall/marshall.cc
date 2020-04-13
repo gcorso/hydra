@@ -97,8 +97,8 @@ struct stream_uploader : public dynamic_buffer {
 struct stream_uploader_pro : public dynamic_buffer {
   const uint64_t execution_id;
   const std::string_view streamname;
-  stream_uploader_pro(int fd, const uint64_t eid, std::string_view sn) : dynamic_buffer(fd), execution_id(eid), streamname(sn) {}
-  uint32_t tail_n;
+  stream_uploader_pro(int fd, const uint64_t eid, std::string_view sn) : dynamic_buffer(fd), execution_id(eid), streamname(sn),tail_n(0),last_upd(0) {}
+  uint32_t tail_n =0;
   std::string tail;
   uint32_t last_upd=0;
 
@@ -137,8 +137,9 @@ struct stream_uploader_pro : public dynamic_buffer {
     if(time(NULL)-last_upd>20)should_upd=true;
     if(should_upd){
       last_upd=time(NULL);
-      db::execute_command(strjoin("UPDATE executions SET ", streamname, " = ", streamname, " || $1::bytea WHERE id = ", execution_id), db::data_binder({{tail.data(), tail.size()}}));
+      if(tail_n)db::execute_command(strjoin("UPDATE executions SET ", streamname, " = substring(", streamname, ",0,length(",streamname,")-",tail_n,") WHERE id = ", execution_id));
       tail_n = tail.size();
+      if(tail_n)db::execute_command(strjoin("UPDATE executions SET ", streamname, " = ", streamname, " || $1::bytea WHERE id = ", execution_id), db::data_binder({{tail.data(), tail.size()}}));
     }
     std::cerr<<std::string_view(buffer::data, rb);
     return rb;
