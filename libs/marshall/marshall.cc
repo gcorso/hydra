@@ -115,6 +115,7 @@ struct stream_uploader_pro : public dynamic_buffer {
       if(c=='\n'){
         //save
         write_on.append(std::move(tail));
+        write_on.push_back(c);
         tail.clear();
       } else if(c=='\r'){
         //erase
