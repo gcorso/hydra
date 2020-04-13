@@ -136,10 +136,12 @@ struct stream_uploader_pro : public dynamic_buffer {
     }
     if(time(NULL)-last_upd>20)should_upd=true;
     if(should_upd){
+      /*
       last_upd=time(NULL);
       if(tail_n)db::execute_command(strjoin("UPDATE executions SET ", streamname, " = substring(", streamname, ",0,length(",streamname,")-",tail_n,") WHERE id = ", execution_id));
       tail_n = tail.size();
       if(tail_n)db::execute_command(strjoin("UPDATE executions SET ", streamname, " = ", streamname, " || $1::bytea WHERE id = ", execution_id), db::data_binder({{tail.data(), tail.size()}}));
+   */
     }
     std::cerr<<std::string_view(buffer::data, rb);
     return rb;
