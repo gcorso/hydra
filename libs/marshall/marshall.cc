@@ -421,7 +421,7 @@ void marshall(const uint64_t execution_id,const uint64_t session_id) {
   ::close(out_pipe[WRITE]);
   ::close(err_pipe[WRITE]);
 
-  stream_uploader_pro su_out(out_pipe[READ], execution_id, "stdout"), su_err(err_pipe[READ], execution_id, "stderr");
+  stream_uploader su_out(out_pipe[READ], execution_id, "stdout"), su_err(err_pipe[READ], execution_id, "stderr");
   stream_executor control_stream(open("/tmp/__hydra_control_pipe_out", O_RDONLY | O_NONBLOCK));
   pollvector pv(&su_out, &su_err, &control_stream);
   db::keep_session_alive(session_id);
