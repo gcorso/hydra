@@ -338,6 +338,7 @@ void marshall(const uint64_t execution_id,const uint64_t session_id) {
   log::marshall << "executing command \"" << execution.command << "\"" << std::endl;
 
   environment::make_env(execution.environment_id);
+  puts("\033[0m");
   mkdir("/tmp/__hydra_resources__",0777);
   system("rm -f /tmp/__hydra_checkpoint.json");
   system("rm -f /tmp/__hydra_control_pipe_out");
