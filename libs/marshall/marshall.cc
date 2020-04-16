@@ -23,7 +23,7 @@ namespace hydra::marshall {
 using nlohmann::json;
 
 namespace status {
-uint64_t execution_id,job_id;
+uint64_t execution_id, job_id;
 }
 
 namespace buffer {
@@ -89,7 +89,7 @@ struct stream_uploader : public dynamic_buffer {
     int rb = dynamic_buffer::read();
     assert(rb > 0);
     if (rb > 0)upload::append_stream(execution_id, streamname, buffer::data, rb);
-    std::cerr<<std::string_view(buffer::data, rb);
+    std::cerr << std::string_view(buffer::data, rb);
     return rb;
   }
 };
@@ -97,10 +97,10 @@ struct stream_uploader : public dynamic_buffer {
 struct stream_uploader_pro : public dynamic_buffer {
   const uint64_t execution_id;
   const std::string_view streamname;
-  stream_uploader_pro(int fd, const uint64_t eid, std::string_view sn) : dynamic_buffer(fd), execution_id(eid), streamname(sn),tail_n(0),last_upd(0) {}
-  uint32_t tail_n =0;
+  stream_uploader_pro(int fd, const uint64_t eid, std::string_view sn) : dynamic_buffer(fd), execution_id(eid), streamname(sn), tail_n(0), last_upd(0) {}
+  uint32_t tail_n = 0;
   std::string tail;
-  uint32_t last_upd=0;
+  uint32_t last_upd = 0;
 
   // at any moment (outside of read), DB contains (some text + \n) * + a prefix of length n of tail.
   // tail shall not contains newlines
@@ -110,14 +110,14 @@ struct stream_uploader_pro : public dynamic_buffer {
     int rb = dynamic_buffer::read();
     assert(rb > 0);
     std::string write_on;
-    for(int i=0;i<rb;++i){
+    for (int i = 0; i < rb; ++i) {
       char c = buffer::data[i];
-      if(c=='\n'){
+      if (c == '\n') {
         //save
         write_on.append(std::move(tail));
         write_on.push_back(c);
         tail.clear();
-      } else if(c=='\r'){
+      } else if (c == '\r') {
         //erase
         tail.clear();
       } else {
@@ -126,16 +126,16 @@ struct stream_uploader_pro : public dynamic_buffer {
       }
     }
     bool should_upd = false;
-    if(!write_on.empty()){
+    if (!write_on.empty()) {
       //remove last n
-      if(tail_n)db::execute_command(strjoin("UPDATE executions SET ", streamname, " = substring(", streamname, ",0,length(",streamname,")-",tail_n,") WHERE id = ", execution_id));
+      if (tail_n)db::execute_command(strjoin("UPDATE executions SET ", streamname, " = substring(", streamname, ",0,length(", streamname, ")-", tail_n, ") WHERE id = ", execution_id));
       tail_n = 0;
       // attach write on
       db::execute_command(strjoin("UPDATE executions SET ", streamname, " = ", streamname, " || $1::bytea WHERE id = ", execution_id), db::data_binder({{write_on.data(), write_on.size()}}));
       should_upd = true;
     }
-    if(time(NULL)-last_upd>20)should_upd=true;
-    if(should_upd){
+    if (time(NULL) - last_upd > 20)should_upd = true;
+    if (should_upd) {
       /*
       last_upd=time(NULL);
       if(tail_n)db::execute_command(strjoin("UPDATE executions SET ", streamname, " = substring(", streamname, ",0,length(",streamname,")-",tail_n,") WHERE id = ", execution_id));
@@ -143,12 +143,10 @@ struct stream_uploader_pro : public dynamic_buffer {
       if(tail_n)db::execute_command(strjoin("UPDATE executions SET ", streamname, " = ", streamname, " || $1::bytea WHERE id = ", execution_id), db::data_binder({{tail.data(), tail.size()}}));
    */
     }
-    std::cerr<<std::string_view(buffer::data, rb);
+    std::cerr << std::string_view(buffer::data, rb);
     return rb;
   }
 };
-
-
 
 void execute_process_request(json);
 
@@ -287,7 +285,7 @@ void make_env(int env_id) {
   }
 
   std::string setup = db::single_result_query(strjoin("SELECT bash_setup FROM environments WHERE id = ", env_id));
-  if(!setup.empty())system(setup.c_str());
+  if (!setup.empty())system(setup.c_str());
 
   std::string gitlink = db::single_result_query(strjoin("SELECT gitlink FROM environments WHERE id = ", env_id));
   system(strjoin("git clone ", gitlink, " /tmp/__hydraenv_", env_id, "__; git -C /tmp/__hydraenv_", env_id, "__ pull -p; git -C /tmp/__hydraenv_", env_id, "__ clean -f -d;").c_str());
@@ -310,17 +308,16 @@ void execute_process_request(json req) {
     log::marshall << "unknown request type: " << rt << std::endl;
     return;
   }
-  if(rt=="set_eta"){
+  if (rt == "set_eta") {
     //TODO: process eta
     return;
   }
-
 
   req.erase(req.find(REQUEST_TYPE_KEY));
   auto linked_files = req.find(LINKED_FILES_KEY)->get<std::vector<std::string>>();
   req.erase(req.find(LINKED_FILES_KEY));
   db::execute_command("BEGIN;");
-  db::execute_command(strjoin("delete from checkpoints where id in (select checkpoints.id from checkpoints left join executions on executions.id = checkpoints.execution_id where executions.job_id = ",status::job_id,");"));
+  db::execute_command(strjoin("delete from checkpoints where id in (select checkpoints.id from checkpoints left join executions on executions.id = checkpoints.execution_id where executions.job_id = ", status::job_id, ");"));
   uint64_t checkpoint_id = db::single_uint64_query(strjoin("INSERT INTO checkpoints (execution_id,value) VALUES (", status::execution_id, ",'", req.dump(), "') returning id;"));
   for (const std::string &path : linked_files) {
     log::marshall << "adding file: " << path << std::endl;
@@ -335,17 +332,17 @@ void execute_process_request(json req) {
 
 }
 
-void marshall(const uint64_t execution_id,const uint64_t session_id) {
+void marshall(const uint64_t execution_id, const uint64_t session_id) {
   status::execution_id = execution_id;
   db::execution execution(execution_id);
   status::job_id = execution.job_id;
 
-  log::marshall << "running job "<<execution.job_id << std::endl;
+  log::marshall << "running job " << execution.job_id << std::endl;
   log::marshall << "executing command \"" << execution.command << "\"" << std::endl;
 
   environment::make_env(execution.environment_id);
   puts("\033[0m");
-  mkdir("/tmp/__hydra_resources__",0777);
+  mkdir("/tmp/__hydra_resources__", 0777);
   system("rm -f /tmp/__hydra_checkpoint.json");
   system("rm -f /tmp/__hydra_control_pipe_out");
   mkfifo("/tmp/__hydra_control_pipe_out", 0666);
@@ -360,20 +357,20 @@ void marshall(const uint64_t execution_id,const uint64_t session_id) {
       std::vector<std::string> retrieved_files;
 
       //raw query
-      PGresult *res = PQexecParams(db::conn, strjoin("select id,name,data from checkpoint_files where checkpoint_id=", ck.id).c_str(),0,NULL,NULL,NULL,NULL,1);
+      PGresult *res = PQexecParams(db::conn, strjoin("select id,name,data from checkpoint_files where checkpoint_id=", ck.id).c_str(), 0, NULL, NULL, NULL, NULL, 1);
       if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         log::fatal << PQresultStatus(res) << std::endl;
         log::fatal << "query failed: " << PQresultErrorMessage(res) << std::endl;
         exit(1);
       }
       for (int i = 0; i < PQntuples(res); ++i) {
-        uint64_t id = db::raw_tou64(PQgetvalue(res,i,0));
-        mkdir(strjoin("/tmp/__hydra_resources__/",id).c_str(),0777);
-        std::string_view name(PQgetvalue(res,i,1),PQgetlength(res,i,1));
-        int fd = open(strjoin("/tmp/__hydra_resources__/",id,"/",name).c_str(),O_WRONLY|O_CREAT,0666);
-        write(fd,PQgetvalue(res,i,2),PQgetlength(res,i,2));
+        uint64_t id = db::raw_tou64(PQgetvalue(res, i, 0));
+        mkdir(strjoin("/tmp/__hydra_resources__/", id).c_str(), 0777);
+        std::string_view name(PQgetvalue(res, i, 1), PQgetlength(res, i, 1));
+        int fd = open(strjoin("/tmp/__hydra_resources__/", id, "/", name).c_str(), O_WRONLY | O_CREAT, 0666);
+        write(fd, PQgetvalue(res, i, 2), PQgetlength(res, i, 2));
         close(fd);
-        retrieved_files.push_back(strjoin("/tmp/__hydra_resources__/",id,"/",name));
+        retrieved_files.push_back(strjoin("/tmp/__hydra_resources__/", id, "/", name));
       }
       PQclear(res);
 
