@@ -304,7 +304,7 @@ void execute_process_request(json req) {
   }
   std::string_view rt = req.find(REQUEST_TYPE_KEY)->get<std::string_view>();
   //log::marshall << "request type: " << rt << std::endl;
-  if (rt != "save_checkpoint" || rt != "set_eta") {
+  if (rt != "save_checkpoint" && rt != "set_eta") {
     log::marshall << "unknown request type: " << rt << std::endl;
     return;
   }

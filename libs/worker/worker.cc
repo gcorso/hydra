@@ -96,7 +96,6 @@ void setup() {
   id = retrieve_file_id();
   if (id) worker_existing(); else worker_new();
   log::worker << "id: " << id << std::endl;
-  system("pip install python-hydra");
 }
 
 }
