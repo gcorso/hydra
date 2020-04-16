@@ -306,10 +306,16 @@ void execute_process_request(json req) {
   }
   std::string_view rt = req.find(REQUEST_TYPE_KEY)->get<std::string_view>();
   //log::marshall << "request type: " << rt << std::endl;
-  if (rt != "save_checkpoint") {
+  if (rt != "save_checkpoint" || rt != "set_eta") {
     log::marshall << "unknown request type: " << rt << std::endl;
     return;
   }
+  if(rt=="set_eta"){
+    //TODO: process eta
+    return;
+  }
+
+
   req.erase(req.find(REQUEST_TYPE_KEY));
   auto linked_files = req.find(LINKED_FILES_KEY)->get<std::vector<std::string>>();
   req.erase(req.find(LINKED_FILES_KEY));
