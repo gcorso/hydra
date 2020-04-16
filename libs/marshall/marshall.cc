@@ -294,7 +294,7 @@ void make_env(int env_id) {
 
 }
 
-static constexpr std::string_view REQUEST_TYPE_KEY = "_request_type", LINKED_FILES_KEY = "_linked_files";
+static constexpr std::string_view REQUEST_TYPE_KEY = "_request_type", LINKED_FILES_KEY = "_linked_files", ETA_MILLIS_KEY = "millisec";
 
 void execute_process_request(json req) {
   log::marshall << "got request" << req << std::endl;
@@ -309,7 +309,7 @@ void execute_process_request(json req) {
     return;
   }
   if (rt == "set_eta") {
-    //TODO: process eta
+    db::execute_command(strjoin("UPDATE executions SET time_eta = current_timestamp(6) + INTERVAL '",req.find(ETA_MILLIS_KEY)->get<uint64_t>()," milliseconds' WHERE id = ",status::execution_id));
     return;
   }
 
