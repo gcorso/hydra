@@ -332,7 +332,7 @@ void execute_process_request(json req) {
 
 }
 
-void marshall(const uint64_t execution_id, const uint64_t session_id) {
+int marshall(const uint64_t execution_id, const uint64_t session_id) {
   status::execution_id = execution_id;
   db::execution execution(execution_id);
   status::job_id = execution.job_id;
@@ -440,5 +440,8 @@ void marshall(const uint64_t execution_id, const uint64_t session_id) {
   int exit_code = WEXITSTATUS(status);
   log::marshall << "exit_code: " << exit_code << std::endl;
   db::execute_command(strjoin("UPDATE executions SET exit_code = ", exit_code, " WHERE id= ", execution_id));
+
+  return exit_code;
+
 }
 }

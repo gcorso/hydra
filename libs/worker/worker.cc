@@ -127,13 +127,13 @@ void try_start() {
   log::worker << "started execution " << status::execution_id << std::endl;
 }
 
-void close() {
+void close(bool remove_last_checkpoint=true) {
   if (status::execution_id == 0)return;
   log::worker << "closing execution " << status::execution_id << std::endl;
   db::execute_command("BEGIN;");
   uint64_t job_id = db::single_uint64_query(strjoin("update executions set state_id = 5, time_end = current_timestamp(6) where id = ", status::execution_id, " returning job_id;"));
   db::execute_command(strjoin("update jobs set state_id = 4 where id = ", job_id, " ;"));
-  db::execute_command(strjoin("delete from checkpoints where id in (select checkpoints.id from checkpoints left join executions on executions.id = checkpoints.execution_id where executions.job_id = ",job_id,");"));
+  if(remove_last_checkpoint)db::execute_command(strjoin("delete from checkpoints where id in (select checkpoints.id from checkpoints left join executions on executions.id = checkpoints.execution_id where executions.job_id = ",job_id,");"));
   db::execute_command("COMMIT;");
   status::execution_id = 0;
 }
@@ -254,9 +254,9 @@ void work() {
     } else {
       status::location = status::L7;
       idle_cycles_left = IDLENESS_LIMIT_CYCLE;
-      marshall::marshall(status::execution_id, status::session_id);
+      int exit_code = marshall::marshall(status::execution_id, status::session_id);
       status::location = status::L8;
-      execution::close();
+      execution::close(exit_code==0);
       status::loc_t expl8 = status::L8;
       if (!status::location.compare_exchange_strong(expl8, status::L9)) {
         assert(expl8 == status::L_DELAYED_SIGINT);

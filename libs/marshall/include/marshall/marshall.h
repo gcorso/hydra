@@ -4,7 +4,7 @@
 #include <cstdint>
 namespace hydra::marshall {
 
-void marshall(const uint64_t execution_id,const uint64_t session_id);
+int marshall(const uint64_t execution_id,const uint64_t session_id);
 
 }
 
