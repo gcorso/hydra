@@ -275,7 +275,8 @@ void make_env(int env_id) {
 
   //already in set
   if (env_dirs.find(env_id) != env_dirs.end()) {
-    system(strjoin(" git -C /tmp/__hydraenv_", env_id, "__ pull -p; git -C /tmp/__hydraenv_", env_id, "__ clean -f -d;").c_str());
+    system(strjoin("git -C /tmp/__hydraenv_", env_id, "__ pull -p;").c_str());
+    //system(strjoin("git -C /tmp/__hydraenv_", env_id, "__ clean -f -d;").c_str());
     return;
   }
 
@@ -309,7 +310,7 @@ void execute_process_request(json req) {
     return;
   }
   if (rt == "set_eta") {
-    db::execute_command(strjoin("UPDATE executions SET time_eta = current_timestamp(6) + INTERVAL '",req.find(ETA_MILLIS_KEY)->get<uint64_t>()," milliseconds' WHERE id = ",status::execution_id));
+    db::execute_command(strjoin("UPDATE executions SET time_eta = current_timestamp(6) + INTERVAL '", req.find(ETA_MILLIS_KEY)->get<uint64_t>(), " milliseconds' WHERE id = ", status::execution_id));
     return;
   }
 
