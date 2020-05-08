@@ -320,7 +320,7 @@ void make_env(int env_id) {
     }
 
     int status = 0;
-    alarm(60);
+    //alarm(60);
     waitpid(child_pid, &status, 0);
     int exit_code = WEXITSTATUS(status);
     child_pid = 0;
