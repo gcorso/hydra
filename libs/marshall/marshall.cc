@@ -62,7 +62,7 @@ template<typename T, typename...Ts>
 struct joiner<T, Ts...> {
   static inline void append_to(std::stringstream &cref, const T &t, Ts &&... ts) {
     cref << t;
-    joiner<Ts...>::append_to(cref, std::forward<Ts>(ts)...);
+    joiner<Ts...>::append_to(cref, std::forward<Ts &&>(ts)...);
   }
 };
 
@@ -71,7 +71,7 @@ struct joiner<T, Ts...> {
 template<typename ...Ts>
 std::string strjoin(Ts &&... ts) {
   std::stringstream ss;
-  util::joiner<Ts...>::append_to(ss, std::forward<Ts>(ts)...);
+  util::joiner<Ts...>::append_to(ss, std::forward<Ts &&>(ts)...);
   return ss.str();
 }
 
@@ -264,7 +264,7 @@ std::unordered_set<int> env_dirs;
 pid_t child_pid = 0;
 void env_timer_handler(int pid) {
   log::marshall << "alarm worked" << std::endl;
-  if(child_pid) {
+  if (child_pid) {
     log::marshall << "chid alive, sending server keepalive, see you in 60 s" << std::endl;
     db::keep_session_alive(worker::status::session_id);
     signal(SIGALRM, env_timer_handler);
@@ -303,10 +303,9 @@ void make_env(int env_id) {
   std::string gitlink = db::single_result_query(strjoin("SELECT gitlink FROM environments WHERE id = ", env_id));
   system(strjoin("git clone ", gitlink, " /tmp/__hydraenv_", env_id, "__; git -C /tmp/__hydraenv_", env_id, "__ pull -p; git -C /tmp/__hydraenv_", env_id, "__ clean -f -d;").c_str());
 
-
   std::string setup = db::single_result_query(strjoin("SELECT bash_setup FROM environments WHERE id = ", env_id));
 
-  if(!setup.empty()) {
+  if (!setup.empty()) {
     signal(SIGALRM, env_timer_handler);
     child_pid = ::fork();
     if (child_pid == 0) {
@@ -330,7 +329,6 @@ void make_env(int env_id) {
     }
   }
 
-
   env_dirs.insert(env_id);
 }
 
@@ -339,38 +337,48 @@ void make_env(int env_id) {
 static constexpr std::string_view REQUEST_TYPE_KEY = "_request_type", LINKED_FILES_KEY = "_linked_files", ETA_MILLIS_KEY = "millisec";
 
 void execute_process_request(json req) {
-  log::marshall << "got request" << req << std::endl;
   if (req.find(REQUEST_TYPE_KEY) == req.end()) {
     log::marshall << "got unvalid request" << std::endl;
     return;
   }
   std::string_view rt = req.find(REQUEST_TYPE_KEY)->get<std::string_view>();
-  //log::marshall << "request type: " << rt << std::endl;
-  if (rt != "save_checkpoint" && rt != "set_eta") {
-    log::marshall << "unknown request type: " << rt << std::endl;
-    return;
-  }
+  log::marshall << "got request type: " << rt << std::endl;
   if (rt == "set_eta") {
     db::execute_command(strjoin("UPDATE executions SET time_eta = current_timestamp(6) + INTERVAL '", req.find(ETA_MILLIS_KEY)->get<uint64_t>(), " milliseconds' WHERE id = ", status::execution_id));
     return;
   }
 
-  req.erase(req.find(REQUEST_TYPE_KEY));
-  auto linked_files = req.find(LINKED_FILES_KEY)->get<std::vector<std::string>>();
-  req.erase(req.find(LINKED_FILES_KEY));
-  db::execute_command("BEGIN;");
-  db::execute_command(strjoin("delete from checkpoints where id in (select checkpoints.id from checkpoints left join executions on executions.id = checkpoints.execution_id where executions.job_id = ", status::job_id, ");"));
-  uint64_t checkpoint_id = db::single_uint64_query(strjoin("INSERT INTO checkpoints (execution_id,value) VALUES (", status::execution_id, ",'", req.dump(), "') returning id;"));
-  for (const std::string &path : linked_files) {
-    log::marshall << "adding file: " << path << std::endl;
-    struct stat s;
-    int fd = open(path.c_str(), O_RDONLY);
-    int status = fstat(fd, &s);
-    const char *f = (const char *) mmap(nullptr, s.st_size, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
-    db::execute_command(strjoin("INSERT INTO checkpoint_files (name,checkpoint_id,data) VALUES ('", basename(path.c_str()), "',", checkpoint_id, ", $1::bytea );"), db::data_binder({{f, s.st_size}}));
-    close(fd);
+  if (rt == "save_checkpoint") {
+    req.erase(req.find(REQUEST_TYPE_KEY));
+    auto linked_files = req.find(LINKED_FILES_KEY)->get<std::vector<std::string>>();
+    req.erase(req.find(LINKED_FILES_KEY));
+    db::execute_command("BEGIN;");
+    db::execute_command(strjoin("delete from checkpoints where id in (select checkpoints.id from checkpoints left join executions on executions.id = checkpoints.execution_id where executions.job_id = ", status::job_id, ");"));
+    uint64_t checkpoint_id = db::single_uint64_query(strjoin("INSERT INTO checkpoints (execution_id,value) VALUES (", status::execution_id, ",'", req.dump(), "') returning id;"));
+    for (const std::string &path : linked_files) {
+      log::marshall << "adding file: " << path << std::endl;
+      struct stat s;
+      int fd = open(path.c_str(), O_RDONLY);
+      int status = fstat(fd, &s);
+      const char *f = (const char *) mmap(nullptr, s.st_size, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
+      db::execute_command(strjoin("INSERT INTO checkpoint_files (name,checkpoint_id,data) VALUES ('", basename(path.c_str()), "',", checkpoint_id, ", $1::bytea );"), db::data_binder({{f, s.st_size}}));
+      close(fd);
+    }
+    db::execute_command("COMMIT;");
+    return;
   }
-  db::execute_command("COMMIT;");
+
+  if (rt == "produced_output") {
+    std::string data = req.at("data").dump();
+    if (!req.contains("name")) {
+      req["name"] = "output";
+      //TODO: assign meaningful name
+    }
+    db::execute_command(strjoin("INSERT INTO outputs (execution_id,name,data) VALUES (", status::execution_id, ",", req.at("name"), ", $1::bson );"), db::data_binder({{data.data(), data.size()}}));
+  }
+
+  log::marshall << "unknown request type: " << rt << std::endl;
+  return;
 
 }
 
