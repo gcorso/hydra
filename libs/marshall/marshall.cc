@@ -374,7 +374,7 @@ void execute_process_request(json req) {
       req["name"] = "output";
       //TODO: assign meaningful name
     }
-    db::execute_command(strjoin("INSERT INTO outputs (execution_id,name,data) VALUES (", status::execution_id, ",", req.at("name"), ", $1::bson );"), db::data_binder({{data.data(), data.size()}}));
+    db::execute_command(strjoin("INSERT INTO outputs (execution_id,name,data) VALUES (", status::execution_id, ",'", req.at("name"), "', $1::bson );"), db::data_binder({{data.data(), data.size()}}));
   }
 
   log::marshall << "unknown request type: " << rt << std::endl;
