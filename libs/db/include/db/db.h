@@ -56,6 +56,12 @@ struct data_binder{
     binary.push_back(1);
   }
   template<typename T>
+  void push_back_nonbinary(const T* ptr,int length){
+    values.push_back((const char *)ptr);
+    lengths.push_back(length);
+    binary.push_back(0);
+  }
+  template<typename T>
   void push_back(const T* ptr,const T* ptr_end){
     values.push_back((const char *)ptr);
     lengths.push_back(ptr_end-ptr);

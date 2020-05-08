@@ -374,7 +374,13 @@ void execute_process_request(json req) {
       req["name"] = "output";
       //TODO: assign meaningful name
     }
-    db::execute_command(strjoin("INSERT INTO outputs (execution_id,name,data) VALUES (", status::execution_id, ",'", req.at("name"), "', $1::jsonb );"), db::data_binder({{data.data(), data.size()}}));
+    //std::cerr << "got data '"<<data<<"'"<<std::endl;
+    std::string cmd = strjoin("INSERT INTO outputs (execution_id,name,data) VALUES (", status::execution_id, ",'", req.at("name"), "', '", data, "'::jsonb );");
+    //std::cerr << cmd << std::endl;
+    // TODO: cleanup
+    db::data_binder j;
+    j.push_back_nonbinary(data.data(), data.length());
+    db::execute_command(strjoin("INSERT INTO outputs (execution_id,name,data) VALUES (", status::execution_id, ",'", req.at("name"), "', $1::jsonb );"), j);
   }
 
   log::marshall << "unknown request type: " << rt << std::endl;
