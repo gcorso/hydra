@@ -1,4 +1,5 @@
 #include <marshall/marshall.h>
+#include <worker/worker.h>
 #include <db/db.h>
 #include <log.h>
 #include <zconf.h>
@@ -16,6 +17,7 @@
 #include <fstream>
 #include <chrono>
 #include <sys/mman.h>
+#include <csignal>
 
 MAKE_STREAM_STRUCT(std::cerr, "marshall: ", marshall)
 
@@ -259,6 +261,19 @@ struct pollvector {
 namespace environment {
 
 std::unordered_set<int> env_dirs;
+pid_t child_pid = 0;
+void env_timer_handler(int pid) {
+  log::marshall << "alarm worked" << std::endl;
+  if(child_pid) {
+    log::marshall << "chid alive, sending server keepalive, see you in 60 s" << std::endl;
+    db::keep_session_alive(worker::status::session_id);
+    signal(SIGALRM, env_timer_handler);
+    alarm(60);
+  } else {
+    log::marshall << "chid finished, do nothing" << std::endl;
+    std::signal(SIGALRM, SIG_IGN);
+  }
+}
 
 void make_env(int env_id) {
   //special case
@@ -286,7 +301,31 @@ void make_env(int env_id) {
   }
 
   std::string setup = db::single_result_query(strjoin("SELECT bash_setup FROM environments WHERE id = ", env_id));
-  if (!setup.empty())system(setup.c_str());
+
+  if(!setup.empty()) {
+    signal(SIGALRM, env_timer_handler);
+    child_pid = ::fork();
+    if (child_pid == 0) {
+      //child process
+
+      //change dir
+      chdir(strjoin("/tmp/__hydraenv_", env_id, "__").c_str());
+
+      //run script
+      system(setup.c_str());
+    }
+
+    int status = 0;
+    alarm(60);
+    waitpid(child_pid, &status, 0);
+    int exit_code = WEXITSTATUS(status);
+    child_pid = 0;
+    if (exit_code) {
+      log::fatal << "execution of bash_setup failed";
+      exit(1);
+    }
+  }
+
 
   std::string gitlink = db::single_result_query(strjoin("SELECT gitlink FROM environments WHERE id = ", env_id));
   system(strjoin("git clone ", gitlink, " /tmp/__hydraenv_", env_id, "__; git -C /tmp/__hydraenv_", env_id, "__ pull -p; git -C /tmp/__hydraenv_", env_id, "__ clean -f -d;").c_str());

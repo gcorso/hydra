@@ -8,6 +8,10 @@ namespace hydra {
 
 namespace worker {
 
+namespace status{
+  extern uint64_t session_id, execution_id;
+}
+
   extern uint64_t id;
   extern std::string nick;
 void work();

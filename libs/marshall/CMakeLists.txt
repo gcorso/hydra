@@ -4,7 +4,7 @@ add_library(${PROJECT_NAME} STATIC marshall.cc)
 
 target_link_libraries(${PROJECT_NAME}
         PRIVATE
-        db log
+        db log worker
         )
 
 add_library(libs::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
