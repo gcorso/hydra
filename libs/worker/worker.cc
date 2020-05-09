@@ -169,9 +169,9 @@ inline void sigint_drop_disconnect_teardown_exit() {
 }
 
 void handle_sigint(int signal_num) {
+  std::signal(SIGINT, SIG_IGN);
   log::worker << "received SIGINT at L" << status::location << ", terminating..." << std::endl;
   using namespace status;
-  std::signal(SIGINT, SIG_IGN);
   switch (location.load()) {
     case L0: {
       sigint_teardown_exit();
