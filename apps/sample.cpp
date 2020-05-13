@@ -1,7 +1,7 @@
 
 #include <db/db.h>
 #include <iostream>
-#include <log.h>
+#include "../libs/log/log.h"
 #include <cassert>
 #include <zconf.h>
 #include <fcntl.h>

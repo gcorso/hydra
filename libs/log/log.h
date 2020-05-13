@@ -1,5 +1,5 @@
-#ifndef HYDRA_LIBS_LOG_INCLUDE_LOG_H_
-#define HYDRA_LIBS_LOG_INCLUDE_LOG_H_
+#ifndef HYDRA_LIBS_LOG_LOG_H_
+#define HYDRA_LIBS_LOG_LOG_H_
 #include <iostream>
 
 namespace hydra::log{
@@ -31,4 +31,4 @@ inline structname name;\
 MAKE_STREAM_STRUCT(std::cerr,"fatal: ",fatal)
 MAKE_STREAM_STRUCT(std::cerr,"worker: ",worker)
 
-#endif //HYDRA_LIBS_LOG_INCLUDE_LOG_H_
+#endif //HYDRA_LIBS_LOG_LOG_H_

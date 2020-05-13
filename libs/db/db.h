@@ -1,11 +1,11 @@
-#ifndef HYDRA_LIBS_DB_INCLUDE_DB_DB_H_
-#define HYDRA_LIBS_DB_INCLUDE_DB_DB_H_
+#ifndef HYDRA_LIBS_DB_DB_H_
+#define HYDRA_LIBS_DB_DB_H_
 #include <string>
-#include <log.h>
+#include <log/log.h>
 #include <utility>
 #include <tuple>
 #include <vector>
-#include "config.h"
+#include <db/config.h>
 
 namespace hydra::db{
 
@@ -71,4 +71,4 @@ struct data_binder{
 
 }
 
-#endif //HYDRA_LIBS_DB_INCLUDE_DB_DB_H_
+#endif //HYDRA_LIBS_DB_DB_H_

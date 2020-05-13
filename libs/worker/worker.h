@@ -1,5 +1,5 @@
-#ifndef HYDRA_LIBS_WORKER_INCLUDE_WORKER_WORKER_H_
-#define HYDRA_LIBS_WORKER_INCLUDE_WORKER_WORKER_H_
+#ifndef HYDRA_LIBS_WORKER_WORKER_H_
+#define HYDRA_LIBS_WORKER_WORKER_H_
 
 #include <cstdint>
 #include <string>
@@ -20,4 +20,4 @@ void work();
 
 }
 
-#endif //HYDRA_LIBS_WORKER_INCLUDE_WORKER_WORKER_H_
+#endif //HYDRA_LIBS_WORKER_WORKER_H_

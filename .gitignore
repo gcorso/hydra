@@ -2,4 +2,4 @@
 config.ini
 /config.ini
 /libs/db/include/db/config_ubuntu.h
-/libs/db/include/db/config.h
+/libs/db/config.h

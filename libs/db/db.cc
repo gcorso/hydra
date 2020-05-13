@@ -1,6 +1,5 @@
 #include <db/db.h>
 #include <cstdlib>
-#include <log.h>
 #include <sstream>
 
 MAKE_STREAM_STRUCT(std::cerr, "db: ", db)

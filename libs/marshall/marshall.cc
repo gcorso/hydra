@@ -1,7 +1,7 @@
-#include <marshall/marshall.h>
+#include <marshall.h>
 #include <worker/worker.h>
 #include <db/db.h>
-#include <log.h>
+#include <log/log.h>
 #include <zconf.h>
 #include <wait.h>
 #include <sys/stat.h>
@@ -13,7 +13,7 @@
 #include <cassert>
 #include <unordered_set>
 #include <algorithm>
-#include <json.hpp>
+#include <log/json.hpp>
 #include <fstream>
 #include <chrono>
 #include <sys/mman.h>

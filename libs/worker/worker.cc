@@ -1,6 +1,6 @@
-#include <worker/worker.h>
+#include <worker.h>
 #include <iostream>
-#include <log.h>
+#include <log/log.h>
 #include <sys/stat.h>
 #include <atomic>
 #include <csignal>
