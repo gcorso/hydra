@@ -48,6 +48,7 @@ disconnector db_disconnector;
 }
 
 PGconn *conn = nullptr;
+//TODO: add concurrency safety
 
 void connect() {
   if (conn)return;
