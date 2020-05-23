@@ -11,6 +11,32 @@
 
 namespace hydra {
 
+using util::strjoin;
+using namespace std::chrono_literals;
+
+class session {
+ public:
+  struct params {
+    std::chrono::milliseconds keepalive_interval = 60s;
+  };
+  const uint64_t id;
+  session() : id(0) {}
+  session(const params &p) : id(db::awsdb.single_uint64_query("INSERT INTO sessions DEFAULT VALUES RETURNING id")) {
+    std::cerr << "new session with id "<<id<<std::endl;
+    keepalive.run([session_id = id]()  {
+      db::awsdb.execute_command(strjoin("update sessions set time_last = current_timestamp(6) where id = ",session_id));
+      std::cerr << "keepalive" << std::endl;
+    }, p.keepalive_interval);
+  }
+  ~session() {
+    if (id == 0)return;
+    keepalive.kill();
+    db::awsdb.execute_command(strjoin("UPDATE sessions SET time_end = current_timestamp(6), state_id = 2 where id = ", id, " ;"));
+  }
+ private:
+  repeater keepalive;
+};
+
 class worker {
  public:
   struct params {

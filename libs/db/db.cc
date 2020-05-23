@@ -190,9 +190,7 @@ int count_rows(std::string_view query) {
   PQclear(res);
   return rows;
 }
-inline uint64_t strtoull(const char *s) {
-  return std::strtoull(s, nullptr, 10);
-}
+
 
 uint64_t raw_tou64(const char *c) {
   const uint8_t* array = (uint8_t*)c;
