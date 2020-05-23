@@ -1,86 +1,78 @@
 #include <db/db.h>
 #include <cstdlib>
 #include <sstream>
+#include <util/util.h>
 
 MAKE_STREAM_STRUCT(std::cerr, "db: ", db)
 
 
-namespace hydra::db {
+namespace hydra{
 
-namespace {
+db db::awsdb;
 
-namespace util {
-template<typename ...Args>
-struct joiner;
-template<>
-struct joiner<> {
-  static inline void append_to(std::stringstream &cref) { return; }
-};
-template<typename T, typename...Ts>
-struct joiner<T, Ts...> {
-  static inline void append_to(std::stringstream &cref, const T &t, Ts &&... ts) {
-    cref << t;
-    joiner<Ts...>::append_to(cref, std::forward<Ts>(ts)...);
-  }
-};
 
-}
+using util::strjoin;
 
-template<typename ...Ts>
-std::string strjoin(Ts &&... ts) {
-  std::stringstream ss;
-  util::joiner<Ts...>::append_to(ss, std::forward<Ts>(ts)...);
-  return ss.str();
-}
-
-}
-
-namespace helper {
-struct disconnector {
-  disconnector() = default;
-  ~disconnector() {
-    log::db << "destroying disconnector" << std::endl;
-    disconnect();
-  }
-};
-disconnector db_disconnector;
-}
-
-PGconn *conn = nullptr;
 //TODO: add concurrency safety
 
-void connect() {
-  if (conn)return;
-  conn = PQconnectdb(HYDRA_LIBS_DB_CONNECTION_STRING);
-  if (PQstatus(conn) != CONNECTION_OK) {
-    log::fatal << "connection to database failed: " << PQerrorMessage(conn);
-    PQfinish(conn);
-    exit(1);
+db::db()  : conn_(PQconnectdb(HYDRA_LIBS_DB_CONNECTION_STRING)) {
+  if (PQstatus(conn_) != CONNECTION_OK) {
+
+    //log::fatal << "connection to database failed: " << PQerrorMessage(conn_);
+    throw database_error(PQerrorMessage(conn_));
+    PQfinish(conn_);
+    conn_ = nullptr;
   }
   log::db << "connected to database " << single_result_query("select current_database();") << std::endl;
 }
 
-void disconnect() {
-  if (conn == nullptr)return;
-  PQfinish(conn);
-  conn = nullptr;
+db::~db() {
+  PQfinish(conn_);
+  conn_ = nullptr;
   log::db << "disconnected from database" << std::endl;
 }
 
-namespace {
-PGresult *execute_or_die(std::string_view query, ExecStatusType expected_status) {
-  connect();
-  PGresult *res = PQexec(conn, std::string(query).c_str());
+PGresult *db::execute_single_(std::string_view query, ExecStatusType expected_status) {
+  PGresult *res = nullptr;
+  {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    res = PQexec(conn_, std::string(query).c_str());
+  }
   if (PQresultStatus(res) != expected_status) {
     log::fatal << PQresultStatus(res) << std::endl;
     log::fatal << "query failed: " << PQresultErrorMessage(res) << std::endl;
+    throw database_error(PQerrorMessage(conn_));
     exit(1);
   }
   return res;
 }
 
+void db::execute_command(std::string_view query) {
+  PGresult *res = execute_single_(query, PGRES_COMMAND_OK);
+  PQclear(res);
+}
+std::string db::single_result_query(std::string_view query) {
+  PGresult *res = db::execute_single_(query, PGRES_TUPLES_OK);
+  if (PQntuples(res) != 1 || PQnfields(res) != 1) {
+    log::fatal << "returned unexpected number of results: " << query << std::endl;
+    exit(1);
+  }
+  std::string result(PQgetvalue(res, 0, 0));
+  PQclear(res);
+  return result;
+}
+
+inline uint64_t strtoull(const char *s) {
+  return std::strtoull(s, nullptr, 10);
+}
+
+uint64_t db::single_uint64_query(std::string_view query) {
+  return inline_single_result_query_processed<strtoull>(query);
+}
+
+/*
+
 PGresult *execute_or_die_params(std::string_view query, ExecStatusType expected_status,const data_binder& bd) {
-  connect();
   PGresult *res = PQexecParams(conn, std::string(query).c_str(),bd.binary.size(), nullptr,bd.values.data(),bd.lengths.data(),bd.binary.data(),0);
   if (PQresultStatus(res) != expected_status) {
     log::fatal << PQresultStatus(res) << std::endl;
@@ -243,6 +235,6 @@ checkpoint checkpoint::retrieve(uint64_t job_id) {
   checkpoint ck{.id=strtoull(PQgetvalue(res,0,0)),.value=PQgetvalue(res,0,1)};
   PQclear(res);
   return ck;
-}
+}*/
 
 }

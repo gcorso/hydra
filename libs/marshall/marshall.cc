@@ -18,11 +18,13 @@
 #include <chrono>
 #include <sys/mman.h>
 #include <csignal>
+#include <util/util.h>
 
 MAKE_STREAM_STRUCT(std::cerr, "marshall: ", marshall)
 
 namespace hydra::marshall {
 using nlohmann::json;
+using util::strjoin;
 
 namespace status {
 uint64_t execution_id, job_id;
@@ -48,34 +50,6 @@ struct dynamic_buffer {
   }
   void close() { /*std::cerr << "fd" << fd << " closed." << std::endl;*/ }
 };
-
-namespace {
-
-namespace util {
-template<typename ...Args>
-struct joiner;
-template<>
-struct joiner<> {
-  static inline void append_to(std::stringstream &cref) { return; }
-};
-template<typename T, typename...Ts>
-struct joiner<T, Ts...> {
-  static inline void append_to(std::stringstream &cref, const T &t, Ts &&... ts) {
-    cref << t;
-    joiner<Ts...>::append_to(cref, std::forward<Ts &&>(ts)...);
-  }
-};
-
-}
-
-template<typename ...Ts>
-std::string strjoin(Ts &&... ts) {
-  std::stringstream ss;
-  util::joiner<Ts...>::append_to(ss, std::forward<Ts &&>(ts)...);
-  return ss.str();
-}
-
-}
 
 namespace upload {
 void append_stream(const uint64_t execution_id, std::string_view streamname, char *data, int size) {

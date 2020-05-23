@@ -9,8 +9,16 @@
 #include <sstream>
 #include <db/db.h>
 #include <marshall/marshall.h>
+#include <util/util.h>
+namespace hydra{
 
+
+worker::~worker() {}
+
+}
+/*
 namespace hydra::worker {
+using util::strjoin;
 
 uint64_t id;
 const std::string WORKER_DIR = std::string(getenv("HOME")).append("/.worker");
@@ -21,34 +29,6 @@ enum loc_t {
 };
 std::atomic<loc_t> location(L0);
 uint64_t session_id = 0, execution_id = 0;
-
-}
-
-namespace {
-
-namespace util {
-template<typename ...Args>
-struct joiner;
-template<>
-struct joiner<> {
-  static inline void append_to(std::stringstream &cref) { return; }
-};
-template<typename T, typename...Ts>
-struct joiner<T, Ts...> {
-  static inline void append_to(std::stringstream &cref, const T &t, Ts &&... ts) {
-    cref << t;
-    joiner<Ts...>::append_to(cref, std::forward<Ts>(ts)...);
-  }
-};
-
-}
-
-template<typename ...Ts>
-std::string strjoin(Ts &&... ts) {
-  std::stringstream ss;
-  util::joiner<Ts...>::append_to(ss, std::forward<Ts>(ts)...);
-  return ss.str();
-}
 
 }
 
@@ -276,3 +256,4 @@ void work() {
 }
 
 }
+ */

@@ -1,6 +1,6 @@
 project(marshall)
 
-add_library(${PROJECT_NAME} STATIC marshall.cc)
+add_library(${PROJECT_NAME} STATIC marshall.cc ../util/util.h ../util/bash_executor.h ../util/bash_executor.cc)
 
 target_link_libraries(${PROJECT_NAME}
         PRIVATE
