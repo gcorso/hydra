@@ -15,7 +15,7 @@ using util::strjoin;
 
 //TODO: add concurrency safety
 
-db::db()  : conn_(PQconnectdb(HYDRA_LIBS_DB_CONNECTION_STRING)) {
+db_base::db_base()  : conn_(PQconnectdb(HYDRA_LIBS_DB_CONNECTION_STRING)) {
   if (PQstatus(conn_) != CONNECTION_OK) {
 
     //log::fatal << "connection to database failed: " << PQerrorMessage(conn_);
@@ -26,17 +26,19 @@ db::db()  : conn_(PQconnectdb(HYDRA_LIBS_DB_CONNECTION_STRING)) {
   log::db << "connected to database " << single_result_query("select current_database();") << std::endl;
 }
 
-db::~db() {
+db_base::~db_base() {
+  if(conn_ == nullptr)return;
   PQfinish(conn_);
   conn_ = nullptr;
   log::db << "disconnected from database" << std::endl;
 }
 
-PGresult *db::execute_single_(std::string_view query, ExecStatusType expected_status) {
+PGresult *db_base::execute_single_(std::string_view query, ExecStatusType expected_status) {
   PGresult *res = nullptr;
   {
-    const std::lock_guard<std::mutex> lock(mutex_);
+    mutex_.lock();
     res = PQexec(conn_, std::string(query).c_str());
+    mutex_.unlock();
   }
   if (PQresultStatus(res) != expected_status) {
     log::fatal << PQresultStatus(res) << std::endl;
@@ -47,12 +49,13 @@ PGresult *db::execute_single_(std::string_view query, ExecStatusType expected_st
   return res;
 }
 
-void db::execute_command(std::string_view query) {
+void db_base::execute_command(std::string_view query) {
   PGresult *res = execute_single_(query, PGRES_COMMAND_OK);
   PQclear(res);
 }
-std::string db::single_result_query(std::string_view query) {
-  PGresult *res = db::execute_single_(query, PGRES_TUPLES_OK);
+
+std::string db_base::single_result_query(std::string_view query) {
+  PGresult *res = execute_single_(query, PGRES_TUPLES_OK);
   if (PQntuples(res) != 1 || PQnfields(res) != 1) {
     log::fatal << "returned unexpected number of results: " << query << std::endl;
     exit(1);
@@ -66,9 +69,14 @@ inline uint64_t strtoull(const char *s) {
   return std::strtoull(s, nullptr, 10);
 }
 
-uint64_t db::single_uint64_query(std::string_view query) {
+uint64_t db_base::single_uint64_query(std::string_view query) {
   return inline_single_result_query_processed<strtoull>(query);
 }
+transaction db_base::start_transaction() {
+  mutex_.lock();
+  return transaction(conn_,mutex_);
+}
+
 
 /*
 

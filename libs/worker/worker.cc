@@ -10,12 +10,9 @@
 #include <db/db.h>
 #include <marshall/marshall.h>
 #include <util/util.h>
-namespace hydra{
-
-
-worker::~worker() {}
-
+namespace hydra {
 }
+
 /*
 namespace hydra::worker {
 using util::strjoin;
