@@ -381,6 +381,7 @@ void execute_process_request(json req) {
     db::data_binder j;
     j.push_back_nonbinary(data.data(), data.length());
     db::execute_command(strjoin("INSERT INTO outputs (execution_id,name,data) VALUES (", status::execution_id, ",'", req.at("name"), "', $1::jsonb );"), j);
+    return;
   }
 
   log::marshall << "unknown request type: " << rt << std::endl;
