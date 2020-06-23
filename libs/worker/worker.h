@@ -8,6 +8,8 @@
 #include <functional>
 #include <util/util.h>
 #include <util/repeater.h>
+#include <env_manager/env_manager.h>
+#include <variant>
 
 namespace hydra {
 
@@ -28,10 +30,14 @@ class session {
       std::cerr << "keepalive" << std::endl;
     }, p.keepalive_interval);
   }
-  ~session() {
+  void close() {
     if (id == 0)return;
     keepalive.kill();
     db::awsdb.execute_command(strjoin("UPDATE sessions SET time_end = current_timestamp(6), state_id = 2 where id = ", id, " ;"));
+
+  }
+  ~session() {
+    close();
   }
  private:
   repeater keepalive;
@@ -84,10 +90,10 @@ class worker {
       // do nothing
     } else if (state_ == state::RUNNING) {
       //TODO: kill executor
+      executor_.kill();
     }
     state_ = state::NONE;
     mutex_.unlock();
-
 
   }
 
@@ -102,13 +108,14 @@ class worker {
     }
     //try to get work
     auto t = db::awsdb.start_transaction();
-    uint64_t job_id = t.single_uint64_query("SELECT COALESCE((SELECT id FROM jobs WHERE state_id = 2 ORDER BY id FOR UPDATE SKIP LOCKED  LIMIT 1),0)");
+    uint64_t job_id = t.single_uint64_query("SELECT COALESCE((SELECT id FROM jobs WHERE state_id = 2 AND batch_id = 1 ORDER BY id FOR UPDATE SKIP LOCKED  LIMIT 1),0)");
     if (job_id == 0) {
       t.abort();
       ++idleness;
       if (idleness >= params_.idleness_limit) {
         std::cerr << "idleness limit exceeded" << std::endl;
         state_ = state::IDLENESS_EXCEEDED;
+        session_.close();
         mutex_.unlock();
         callback_();
         endp.set_value_at_thread_exit();
@@ -123,20 +130,56 @@ class worker {
       }).detach();
       return;
     }
-    exit(177);
     //execution
-    state_ = state::NONE;
-    mutex_.unlock();
+    t.execute_command(strjoin("UPDATE jobs set state_id=3 WHERE id = ", job_id, ";"));
+    uint64_t execution_id = t.single_uint64_query(strjoin("insert into executions (session_id , job_id ) values (", session_.id, ",", job_id, ") returning id;"));
+    t.commit();
     idleness = 0;
+    //prepare env
+    std::promise<void> p = std::move(endp);
+    std::async([job_id, execution_id, this](std::promise<void> p) {
+      int env_fd = env_manager::make_environment(db::awsdb.single_uint64_query(strjoin("SELECT environment_id FROM jobs WHERE id = ", job_id, ";")));
+      mutex_.lock();
+      if (state_ == state::NONE) {
+        mutex_.unlock();
+        p.set_value_at_thread_exit();
+        return;
+      }
+      state_ = state::RUNNING;
+      std::cerr << "starting job" << std::endl;
+      executor_.run(db::awsdb.single_result_query(strjoin("SELECT command FROM jobs WHERE id = ", job_id, ";")).c_str(), {.execution_directory = env_fd},
+                    [job_id, execution_id, this](std::promise<void> p) {
+                      std::cerr << "ended job" << std::endl;
 
+                      mutex_.lock();
+                      if (state_ == state::NONE) {
+                        mutex_.unlock();
+                        p.set_value_at_thread_exit();
+                        return;
+                      }
+
+                      state_ = state::WAITING;
+                      int ec = std::get<util::executor::returned>(executor_.join()).exit_code;
+                      auto t = db::awsdb.start_transaction();
+                      t.execute_command(strjoin("UPDATE jobs set state_id=4 WHERE id = ", job_id, ";"));
+                      t.execute_command(strjoin("UPDATE executions set set state_id = 5, time_end = current_timestamp(6), exit_code=", ec, " where id = ", execution_id));
+                      t.commit();
+
+                      mutex_.unlock();
+                      act(std::move(p));
+                    }, std::move(p));
+      mutex_.unlock();
+    }, std::move(endp));
+    mutex_.unlock();
   }
   int idleness;
   const params params_;
   state state_;
   std::mutex mutex_;
-  const session session_;
+  session session_;
   std::function<void()> callback_;
   std::future<void> join_;
+  util::executor executor_;
 };
 
 }

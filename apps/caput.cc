@@ -3,7 +3,7 @@
 using namespace std::chrono_literals;
 
 int main() {
-  hydra::worker w({.idleness_limit = 4, .wait_delay=6s}, []() { std::cerr << "worker ended" << std::endl; });
+  hydra::worker w({.idleness_limit = 4, .wait_delay=6s}, []() { std::cerr << "worker ended" << std::endl; exit(0); });
   w.run();
   std::string cmd;
   while (true) {

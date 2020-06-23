@@ -1,4 +1,7 @@
+add_subdirectory(util)
 add_subdirectory(log)
 add_subdirectory(db)
+add_subdirectory(env_manager)
 #add_subdirectory(marshall)
+add_subdirectory(execution)
 add_subdirectory(worker)

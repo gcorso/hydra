@@ -2,7 +2,39 @@
 #ifndef HYDRA_LIBS_UTIL_EXECUTOR_H_
 #define HYDRA_LIBS_UTIL_EXECUTOR_H_
 
-namespace hydra{
+#include <thread>
+#include <iostream>
+#include <mutex>
+#include <functional>
+#include <list>
+#include <zconf.h>
+#include <atomic>
+#include <wait.h>
+#include <cassert>
+#include <memory>
+#include <future>
+#include <variant>
+
+namespace hydra::util {
+
+
+
+
+using namespace std::chrono_literals;
+typedef decltype(&std::thread::joinable) tj;
+
+template<typename Threadable>
+struct threadable_traits {
+  static_assert(std::is_same_v<bool (Threadable::*)() const noexcept, decltype(&Threadable::joinable)>);
+  static_assert(std::is_same_v<void (Threadable::*)(), decltype(&Threadable::join)>);
+  static_assert(std::is_same_v<void (Threadable::*)(), decltype(&Threadable::detach)>);
+  static_assert(!std::is_copy_assignable_v<Threadable>);
+  static_assert(!std::is_copy_constructible_v<Threadable>);
+  static_assert(std::is_default_constructible_v<Threadable>);
+  static constexpr bool valid = true;
+};
+
+static_assert(threadable_traits<std::thread>::valid);
 
 class executor {
  public:
@@ -70,10 +102,10 @@ class executor {
 
   }
   template<typename Stringible, typename _Callable, typename... _Args>
-  void run(const Stringible &command, const params &par, _Callable &&f, _Args &&... args) {
+  executor& run(const Stringible &command, const params &par, _Callable &&f, _Args &&... args) {
     pid_ = fork_exec(command, par);
     state_ = state::RUNNING;
-    execution_ = std::async([&e = *this, pid = pid_, f, args...]() mutable -> int {
+    execution_ = std::async([&e = *this, pid = pid_, f](_Args &&... args) mutable -> int {
       int exit_status;
       int w = waitpid(pid, &exit_status, 0);
       assert(w == pid);
@@ -83,7 +115,8 @@ class executor {
       }
       std::invoke(std::forward<_Callable>(f), std::forward<_Args>(args)...);
       return exit_status;
-    });
+    },std::forward<_Args>(args)...);
+    return *this;
   }
   bool joinable() const noexcept {return pid_;}
   pid_t pid() const noexcept {return pid_ ?: -1;}
@@ -93,22 +126,11 @@ class executor {
   std::future<int> execution_;
 };
 
-std::ostream &operator<<(std::ostream &o, const executor::returned &x) {
-  o << "Process finished with exit code " << x.exit_code;
-  return o;
-}
-std::ostream &operator<<(std::ostream &o, const executor::signaled &x) {
-  o << "Process terminated with signal " << x.signal;
-  return o;
-}
-std::ostream &operator<<(std::ostream &o, const executor::core_dumped &x) {
-  o << "Segmentation fault (core dumped)";
-  return o;
-}
-std::ostream &operator<<(std::ostream &o, const executor::termination &x) {
-  std::visit([&o](const auto& v) { o << v; }, x);
-  return o;
-}
+std::ostream &operator<<(std::ostream &o, const executor::returned &x);
+std::ostream &operator<<(std::ostream &o, const executor::signaled &x);
+std::ostream &operator<<(std::ostream &o, const executor::core_dumped &x);
+std::ostream &operator<<(std::ostream &o, const executor::termination &x);
+
 }
 
 #endif //HYDRA_LIBS_UTIL_EXECUTOR_H_

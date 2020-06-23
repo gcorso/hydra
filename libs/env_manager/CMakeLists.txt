@@ -1,10 +1,10 @@
-project(worker)
+project(env_manager)
 
-add_library(${PROJECT_NAME} STATIC worker.cc)
+add_library(${PROJECT_NAME} STATIC env_manager.cc)
 
 target_link_libraries(${PROJECT_NAME}
         PRIVATE
-        db log env_manager
+        util db log
         )
 
 add_library(libs::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
