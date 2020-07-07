@@ -5,7 +5,7 @@
 #include <utility>
 #include <tuple>
 #include <vector>
-#include "config.h"
+#include <db/config.h>
 
 namespace hydra::db{
 

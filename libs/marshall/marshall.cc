@@ -18,6 +18,7 @@
 #include <chrono>
 #include <sys/mman.h>
 #include <csignal>
+#include <iomanip>
 
 MAKE_STREAM_STRUCT(std::cerr, "marshall: ", marshall)
 
@@ -334,6 +335,19 @@ void make_env(int env_id) {
 
 }
 
+std::string h_size(size_t s){
+  static constexpr std::array<const char*,5> suff = { "B", "KB", "MB", "GB", "TB" };
+  int order = 0;
+  double sz = s;
+  while (sz >= 1024 && order < suff.size() - 1) {
+    order++;
+    sz/=1024;
+  }
+  std::stringstream ss;
+  ss << std::fixed << std::setprecision(3) << sz << suff[order];
+  return ss.str();
+}
+
 static constexpr std::string_view REQUEST_TYPE_KEY = "_request_type", LINKED_FILES_KEY = "_linked_files", ETA_MILLIS_KEY = "millisec";
 
 void execute_process_request(json req) {
@@ -363,6 +377,8 @@ void execute_process_request(json req) {
       const char *f = (const char *) mmap(nullptr, s.st_size, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
       db::execute_command(strjoin("INSERT INTO checkpoint_files (name,checkpoint_id,data) VALUES ('", basename(path.c_str()), "',", checkpoint_id, ", $1::bytea );"), db::data_binder({{f, s.st_size}}));
       close(fd);
+      log::marshall << "uploaded file \"" << path <<"\" ( "<<h_size(s.st_size)<<" )"<< std::endl;
+
     }
     db::execute_command("COMMIT;");
     return;
