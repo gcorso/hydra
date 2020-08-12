@@ -119,7 +119,7 @@ void close() {
 namespace execution {
 void try_start() {
   db::execute_command("BEGIN;");
-  uint64_t job_id = db::single_uint64_query_orelse("SELECT id FROM jobs WHERE state_id = 2 ORDER BY id FOR UPDATE SKIP LOCKED  LIMIT 1;", 0);
+  uint64_t job_id = db::single_uint64_query_orelse("SELECT id FROM jobs WHERE state_id = 2 ORDER BY priority DESC, id FOR UPDATE SKIP LOCKED  LIMIT 1;", 0);
   if (job_id == 0) return db::execute_command("COMMIT TRANSACTION;");
   db::execute_command(strjoin("UPDATE jobs set state_id=3 WHERE id = ", job_id, ";"));
   status::execution_id = db::single_uint64_query(strjoin("insert into executions (session_id , job_id ) values (", status::session_id, ",", job_id, ") returning id;"));
