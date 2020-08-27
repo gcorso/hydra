@@ -381,6 +381,11 @@ void execute_process_request(json req) {
 
     }
     db::execute_command("COMMIT;");
+
+    if(db::single_uint64_query("SELECT sum(pg_relation_size(oid)::bigint)  FROM pg_class C;")>=16106127360ULL)/*15GB*/{
+      db::execute_command("VACUUM FULL;");
+    }
+
     return;
   }
 
