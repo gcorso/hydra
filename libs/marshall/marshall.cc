@@ -383,6 +383,7 @@ void execute_process_request(json req) {
     db::execute_command("COMMIT;");
 
     if(db::single_uint64_query("SELECT sum(pg_relation_size(oid)::bigint)  FROM pg_class C;")>=10000000000ULL)/*15GB*/{
+      log::fatal << "DB almost full - trying to vacuum" << std::endl;
       db::execute_command("VACUUM FULL;");
     }
 
