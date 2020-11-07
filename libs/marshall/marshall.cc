@@ -292,7 +292,7 @@ void make_env(int env_id) {
   //already in set
   if (env_dirs.find(env_id) != env_dirs.end()) {
     system(strjoin("git -C /tmp/__hydraenv_", env_id, "__ pull -p;").c_str());
-    system(strjoin("git -C /tmp/__hydraenv_", env_id, "__ clean -f -d;").c_str());
+    //system(strjoin("git -C /tmp/__hydraenv_", env_id, "__ clean -f -d;").c_str());
     return;
   }
 
